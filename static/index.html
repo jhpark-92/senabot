@@ -307,7 +307,11 @@ async function sendMessage() {
   }
 }
 sendBtn.addEventListener('click', sendMessage);
-chatInput.addEventListener('keydown', e => { if (e.key === 'Enter') sendMessage(); });
+chatInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.isComposing) {
+    sendMessage();
+  }
+});
 
 // ---- 가이드 데이터 로드 (가이드 보기 / 덱 수정 공용) ----
 async function loadGuide(mode) {
