@@ -1,0 +1,6 @@
+fastapi
+uvicorn
+fastmcp
+requests
+python-dotenv
+google-genai
