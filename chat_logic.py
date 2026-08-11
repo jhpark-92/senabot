@@ -2,6 +2,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 import os
+import json
 from fastmcp import Client
 from google import genai
 from google.genai import types
@@ -9,17 +10,29 @@ from google.genai import types
 mcp_client = Client("mcp_server.py")
 gemini_client = genai.Client(api_key=os.environ["GOOGLE_API_KEY"])
 
-SYSTEM_INSTRUCTION = """당신은 게임 길드전 공격팀 세팅을 도와주는 전문가 챗봇입니다.
+def load_abbreviations():
+    with open("abbreviations.json", "r", encoding="utf-8") as f:
+        return json.load(f)
+
+abbreviations = load_abbreviations()
+
+SYSTEM_INSTRUCTION = f"""당신은 게임 길드전 공격팀 세팅을 도와주는 전문가 챗봇입니다.
 
 [답변 원칙]
 사용자의 질문에 답할 때는 반드시 get_guide 도구로 가이드 데이터를 먼저 조회해서 답변하세요.
-가이드 데이터는 방어덱 이름을 키로 하는 구조화된 정보입니다 (counter_decks, priority_note, equipment, notes).
-corrections 목록에 있는 정정 내용이 있다면, 그 내용을 원본 데이터보다 항상 우선하여 답변하세요.
+"카운터", "잡다", "패다", "이기다", "상대하다" 등은 모두 같은 의미(그 방어덱을 상대로 이기는 공격 조합)로 이해하세요.
+
+[캐릭터 축약어 사전]
+덱 이름은 아래 캐릭터 이름 축약어의 조합입니다:
+{json.dumps(abbreviations, ensure_ascii=False, indent=2)}
+
+"불확실_확인필요"에 있는 축약어(오, 엘)는 여러 캐릭터를 가리킬 수 있으니, 데이터에 있는 실제 덱 이름과 대조해서 가장 일치하는 쪽으로 판단하세요.
+사용자가 캐릭터 이름을 순서 상관없이 나열하거나(예: "선란 델론즈 오르카"), 축약어로 조합해서 말하면(예: "선델오") 같은 덱을 가리키는 것으로 이해하세요.
+그래도 어떤 덱인지 애매하면, 짧고 의미 없는 답변("아", "네") 대신 "혹시 OO 조합을 말씀하신 건가요?"처럼 되물어보세요.
 
 [정정 처리]
 사용자가 "이거 틀렸어", "사실은 ~야" 처럼 기존 내용을 정정하려고 하면,
 add_correction 도구를 사용해 정정 내용을 저장하고, 저장했다고 알려주세요."""
-
 
 async def ask(user_message: str) -> str:
     async with mcp_client:
