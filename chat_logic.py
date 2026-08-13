@@ -7,7 +7,8 @@ from fastmcp import Client
 from google import genai
 from google.genai import types
 
-mcp_client = Client("mcp_server.py")
+PORT = os.environ.get("PORT", "8001")
+mcp_client = Client("mcp_server.py", env={**os.environ, "PORT": PORT})
 gemini_client = genai.Client(api_key=os.environ["GOOGLE_API_KEY"])
 
 def load_abbreviations():
