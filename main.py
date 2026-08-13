@@ -86,7 +86,7 @@ def save_guide_data(data):
 @app.put("/guide/{deck_name}")
 def update_deck(deck_name: str, update: DeckUpdate):
     check_password(update.password)
-    
+
     guide_data = load_guide_data()
     guide_data[deck_name] = {
         "counter_decks": update.counter_decks,
@@ -106,3 +106,11 @@ SHARED_PASSWORD = os.environ.get("SHARED_PASSWORD", "changeme")
 def check_password(password: str):
     if password != SHARED_PASSWORD:
         raise HTTPException(status_code=403, detail="비밀번호가 올바르지 않습니다.")
+
+class PasswordCheck(BaseModel):
+    password: str
+
+@app.post("/verify-password")
+def verify_password(body: PasswordCheck):
+    check_password(body.password)  # 틀리면 403 에러 자동 발생
+    return {"ok": True}

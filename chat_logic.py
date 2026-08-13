@@ -2,6 +2,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 import os
+import json
 from fastmcp import Client
 from fastmcp.client.transports import StdioTransport
 from google import genai
