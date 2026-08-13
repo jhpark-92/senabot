@@ -185,15 +185,22 @@
   }
   .clear-btn:hover { border-color: var(--danger); color: var(--danger); }
 
-  /* 정정내역 뷰 */
+  /* 정정내역(수정이력) 뷰 */
   .correction-item {
     background: var(--panel); border: 1px solid var(--border); border-left: 3px solid var(--gold-dim);
     border-radius: 4px; padding: 14px 16px; margin-bottom: 10px; font-size: 13.5px;
   }
-  .correction-item .wrong { color: var(--danger); text-decoration: line-through; opacity: .8; }
-  .correction-item .arrow { color: var(--text-dim); margin: 0 8px; }
-  .correction-item .correct { color: var(--ok); }
+  .correction-item .deck-title { color: var(--gold); font-weight: 600; margin-bottom: 4px; }
+  .correction-item .timestamp { color: var(--text-dim); font-size: 11.5px; margin-bottom: 6px; }
+  .correction-item .changed { color: var(--ok); }
   .empty-state { color: var(--text-dim); font-size: 13.5px; padding: 24px; text-align: center; }
+
+  /* 메모장 뷰 */
+  #memoTextarea {
+    width: 100%; min-height: 50vh; background: var(--panel); border: 1px solid var(--border);
+    border-radius: 6px; padding: 16px; color: var(--text); font-size: 14px; font-family: inherit; resize: vertical;
+  }
+  .memo-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; }
 
   /* 관리자 승인 뷰 */
   .admin-gate { display: flex; flex-direction: column; gap: 10px; max-width: 320px; }
@@ -292,7 +299,8 @@
     <div class="tab" data-view="guide">가이드 보기</div>
     <div class="tab" data-view="edit">덱 수정</div>
     <div class="tab" data-view="corrections">정정 내역</div>
-    <div class="tab" data-view="admin">승인 관리</div>
+    <div class="tab" id="memoTab" data-view="memo" style="display:none;">메모장</div>
+    <div class="tab" id="adminTab" data-view="admin" style="display:none;">승인 관리</div>
   </div>
 
   <main>
@@ -304,7 +312,7 @@
         <button id="sendBtn">전송</button>
       </div>
       <div class="hint">
-        <span>챗봇 대화 중 정정된 내용은 "정정 내역" 탭에서, 덱 정보 자체를 고치려면 "덱 수정" 탭을 이용하세요.</span>
+        <span>덱 정보 자체를 고치려면 "덱 수정" 탭을 이용하세요.</span>
         <button class="clear-btn" id="clearChatBtn">대화 지우기</button>
       </div>
     </section>
@@ -335,6 +343,14 @@
 
     <section id="view-corrections" class="view">
       <div id="correctionsList"></div>
+    </section>
+
+    <section id="view-memo" class="view">
+      <textarea id="memoTextarea" placeholder="수정하고 싶은 내용을 자유롭게 적어두세요. 길드원 전체가 함께 보는 메모장입니다."></textarea>
+      <div class="memo-footer">
+        <div id="memoStatus" style="font-size:12.5px;"></div>
+        <button class="save-btn" id="saveMemoBtn" style="margin-top:0;">저장</button>
+      </div>
     </section>
 
     <section id="view-admin" class="view">
@@ -468,6 +484,13 @@ function initApp() {
     location.reload();
   });
 
+  // admin 계정이면 승인 관리 + 메모장 탭 보이기
+  const currentUsername = localStorage.getItem('sena_bot_username');
+  if (currentUsername === 'admin') {
+    document.getElementById('adminTab').style.display = 'block';
+    document.getElementById('memoTab').style.display = 'block';
+  }
+
   const tabs = document.querySelectorAll('.tab');
   const views = document.querySelectorAll('.view');
   tabs.forEach(tab => {
@@ -479,6 +502,7 @@ function initApp() {
       if (tab.dataset.view === 'guide') loadGuide('guide');
       if (tab.dataset.view === 'edit') loadGuide('edit');
       if (tab.dataset.view === 'corrections') loadCorrections();
+      if (tab.dataset.view === 'memo') loadMemo();
     });
   });
 
@@ -673,7 +697,7 @@ function initApp() {
     }
   }
 
-  // ---- 정정 내역 ----
+  // ---- 정정 내역 (덱 수정 이력 기반) ----
   window.loadCorrections = async function() {
     const list = document.getElementById('correctionsList');
     list.textContent = '불러오는 중...';
@@ -681,20 +705,67 @@ function initApp() {
       const res = await fetch('/corrections');
       const data = await res.json();
       if (!data.length) {
-        list.innerHTML = '<div class="empty-state">아직 정정된 내용이 없습니다.</div>';
+        list.innerHTML = '<div class="empty-state">아직 수정 이력이 없습니다.</div>';
         return;
       }
-      list.innerHTML = data.map(c => `
-        <div class="correction-item">
-          <span class="wrong">${c.wrong_info}</span>
-          <span class="arrow">→</span>
-          <span class="correct">${c.correct_info}</span>
-        </div>
-      `).join('');
+      const fieldLabels = { counter_decks: '카운터 조합', priority_note: '우선순위', equipment: '장비 세팅', notes: '메모' };
+      list.innerHTML = data.map(h => {
+        const changedFields = [];
+        for (const key in fieldLabels) {
+          const beforeVal = JSON.stringify(h.before[key] || (key === 'counter_decks' ? [] : ''));
+          const afterVal = JSON.stringify(h.after[key] || (key === 'counter_decks' ? [] : ''));
+          if (beforeVal !== afterVal) changedFields.push(fieldLabels[key]);
+        }
+        return `
+          <div class="correction-item">
+            <div class="deck-title">${h.deck_name}</div>
+            <div class="timestamp">${h.timestamp}</div>
+            <div>변경된 항목: <span class="changed">${changedFields.join(', ') || '없음'}</span></div>
+          </div>
+        `;
+      }).join('');
     } catch (e) {
-      list.innerHTML = '<div class="empty-state">정정 내역을 불러오지 못했습니다.</div>';
+      list.innerHTML = '<div class="empty-state">수정 이력을 불러오지 못했습니다.</div>';
     }
   };
+
+  // ---- 메모장 ----
+  async function loadMemo() {
+    const textarea = document.getElementById('memoTextarea');
+    try {
+      const res = await fetch('/memo');
+      const data = await res.json();
+      textarea.value = data.content || '';
+    } catch (e) {}
+  }
+  window.loadMemo = loadMemo;
+
+  document.getElementById('saveMemoBtn').addEventListener('click', async () => {
+    const btn = document.getElementById('saveMemoBtn');
+    const status = document.getElementById('memoStatus');
+    const password = localStorage.getItem('sena_bot_password');
+    btn.disabled = true;
+    status.textContent = '';
+
+    try {
+      const res = await fetch('/memo', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          content: document.getElementById('memoTextarea').value,
+          password: password
+        })
+      });
+      if (!res.ok) throw new Error();
+      status.textContent = '저장되었습니다.';
+      status.style.color = 'var(--ok)';
+    } catch (e) {
+      status.textContent = '저장에 실패했습니다.';
+      status.style.color = 'var(--danger)';
+    } finally {
+      btn.disabled = false;
+    }
+  });
 
   // ---- 관리자 승인 ----
   document.getElementById('adminUnlockBtn').addEventListener('click', async () => {
