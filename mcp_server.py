@@ -1,9 +1,13 @@
+# mcp_server.py
+import os
 from fastmcp import FastMCP
 import requests
 
 mcp = FastMCP("Guide Tools")
 
-FASTAPI_BASE_URL = "http://127.0.0.1:8001"
+# Railway가 지정하는 포트를 그대로 사용 (없으면 로컬 기본값 8001)
+PORT = os.environ.get("PORT", "8001")
+FASTAPI_BASE_URL = f"http://127.0.0.1:{PORT}"
 
 
 @mcp.tool()

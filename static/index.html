@@ -300,7 +300,7 @@ async function sendMessage() {
     pendingBubble.textContent = data.answer;
     pendingBubble.classList.remove('pending');
   } catch (e) {
-    pendingBubble.textContent = '오류가 발생했습니다. 서버가 켜져 있는지 확인해주세요.';
+    pendingBubble.textCㄹontent = '오류가 발생했습니다. 서버가 켜져 있는지 확인해주세요.';
     pendingBubble.classList.remove('pending');
   } finally {
     sendBtn.disabled = false;
@@ -323,12 +323,20 @@ async function loadGuide(mode) {
   renderDeckList(mode);
 }
 
+function normalize(str) {
+  return str.split('').sort().join('');
+}
+
 function renderDeckList(mode) {
   const listEl = document.getElementById(mode === 'guide' ? 'guideListItems' : 'editListItems');
   const searchEl = document.getElementById(mode === 'guide' ? 'guideSearch' : 'editSearch');
   const keyword = (searchEl.value || '').trim();
+  const normalizedKeyword = normalize(keyword);
 
-  const names = Object.keys(guideDataCache).filter(n => n.includes(keyword)).sort();
+  const names = Object.keys(guideDataCache).filter(n =>
+    n.includes(keyword) || normalize(n).includes(normalizedKeyword)
+  ).sort();
+
   listEl.innerHTML = names.map(name =>
     `<div class="deck-list-item" data-deck="${name}">${name}</div>`
   ).join('') || '<div class="empty-state">일치하는 덱이 없습니다.</div>';
