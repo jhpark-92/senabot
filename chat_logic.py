@@ -2,14 +2,21 @@ from dotenv import load_dotenv
 load_dotenv()
 
 import os
-import json
 from fastmcp import Client
+from fastmcp.client.transports import StdioTransport
 from google import genai
 from google.genai import types
 
 PORT = os.environ.get("PORT", "8001")
-mcp_client = Client("mcp_server.py", env={**os.environ, "PORT": PORT})
+
+transport = StdioTransport(
+    command="python3",
+    args=["mcp_server.py"],
+    env={**os.environ, "PORT": PORT},
+)
+mcp_client = Client(transport)
 gemini_client = genai.Client(api_key=os.environ["GOOGLE_API_KEY"])
+
 
 def load_abbreviations():
     with open("abbreviations.json", "r", encoding="utf-8") as f:
