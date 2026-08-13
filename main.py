@@ -8,7 +8,8 @@
 4. 회원가입 / 로그인 / 관리자 승인
 5. 관리자용 회원 관리 (전체 조회, 삭제)
 6. 공유 메모장
-7. Railway Volume(영구 저장소) 대응
+7. 레이드 공략 (강림 / 파괴신 / 돌발레이드)
+8. Railway Volume(영구 저장소) 대응
 """
 
 import os
@@ -56,6 +57,20 @@ def ensure_data_files():
         "deck_history.json": [],
         "users.json": {},
         "memo.json": {"content": ""},
+        "raid_data.json": {
+            "강림": {
+                "type": "list",
+                "bosses": {"태오": "", "카일": "", "연희": "", "카르마": ""},
+            },
+            "파괴신": {
+                "type": "single",
+                "content": "",
+            },
+            "돌발레이드": {
+                "type": "list",
+                "bosses": {"칼리스트라": "", "아스트레아": "", "레오니드": ""},
+            },
+        },
     }
     for filename, empty_value in defaults.items():
         dest = path(filename)
@@ -76,7 +91,7 @@ ensure_data_files()
 # 비밀번호 관련 유틸리티
 # =========================================================
 
-# 덱 수정 / 메모장 저장 등에 쓰이는 "공유 비밀번호" (길드원 전체가 같이 사용)
+# 덱 수정 / 메모장 / 레이드 저장 등에 쓰이는 "공유 비밀번호" (길드원 전체가 같이 사용)
 SHARED_PASSWORD = os.environ.get("SHARED_PASSWORD", "changeme")
 # 회원 승인/관리 기능에 쓰이는 "관리자 비밀번호"
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "changeme_admin")
@@ -170,6 +185,29 @@ def save_memo(data):
 
 
 # =========================================================
+# 레이드 공략 (raid_data.json) — 강림 / 파괴신 / 돌발레이드
+#
+# 구조 예시:
+# {
+#   "강림": {"type": "list", "bosses": {"태오": "내용...", "카일": "", ...}},
+#   "파괴신": {"type": "single", "content": "내용..."},
+#   "돌발레이드": {"type": "list", "bosses": {"칼리스트라": "", ...}}
+# }
+#
+# type이 "list"면 보스별로 따로 관리, "single"이면 카테고리 전체가 텍스트 하나
+# =========================================================
+
+def load_raid_data():
+    with open(path("raid_data.json"), "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+def save_raid_data(data):
+    with open(path("raid_data.json"), "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+
+# =========================================================
 # 요청/응답 형태 정의 (Pydantic 모델)
 # =========================================================
 
@@ -210,6 +248,12 @@ class RevokeRequest(BaseModel):
 
 
 class MemoUpdate(BaseModel):
+    content: str
+    password: str
+
+
+class RaidUpdate(BaseModel):
+    boss: str | None = None   # "list" 타입 카테고리일 때만 사용 (예: "태오")
     content: str
     password: str
 
@@ -258,7 +302,7 @@ def update_deck(deck_name: str, update: DeckUpdate):
     guide_data[deck_name] = after
     save_guide_data(guide_data)
 
-    # 수정 이력 기록 (누가 언제 어떤 덱을 바꿨는지는 없지만, 변경 전/후 내용과 시각은 남음)
+    # 수정 이력 기록 (변경 전/후 내용과 시각)
     history = load_deck_history()
     history.append({
         "deck_name": deck_name,
@@ -299,6 +343,41 @@ def update_memo(body: MemoUpdate):
 
 
 # =========================================================
+# 레이드 공략 (강림 / 파괴신 / 돌발레이드)
+# =========================================================
+
+@app.get("/raid")
+def get_raid_data():
+    """레이드 공략 데이터 전체 반환 (강림/파괴신/돌발레이드)"""
+    return load_raid_data()
+
+
+@app.put("/raid/{category}")
+def update_raid(category: str, update: RaidUpdate):
+    """
+    특정 카테고리(강림/파괴신/돌발레이드)의 공략 내용을 수정.
+    카테고리 type이 "list"면 update.boss로 어떤 보스인지 지정해야 하고,
+    "single"이면 boss 없이 content만 전체 교체한다.
+    """
+    check_password(update.password)
+    raid_data = load_raid_data()
+
+    if category not in raid_data:
+        raise HTTPException(status_code=404, detail="존재하지 않는 카테고리입니다.")
+
+    entry = raid_data[category]
+    if entry["type"] == "single":
+        entry["content"] = update.content
+    else:  # "list" 타입 (보스별 관리)
+        if not update.boss or update.boss not in entry["bosses"]:
+            raise HTTPException(status_code=400, detail="존재하지 않는 보스입니다.")
+        entry["bosses"][update.boss] = update.content
+
+    save_raid_data(raid_data)
+    return {"message": "저장되었습니다."}
+
+
+# =========================================================
 # 챗봇 대화
 # =========================================================
 
@@ -313,7 +392,7 @@ async def chat_endpoint(req: ChatRequest):
 
 
 # =========================================================
-# 사이트 접속 시 비밀번호 확인 (구버전 호환용, 현재는 로그인 시스템이 주로 사용됨)
+# 사이트 접속 시 비밀번호 확인 (구버전 호환용)
 # =========================================================
 
 @app.post("/verify-password")
