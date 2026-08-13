@@ -223,30 +223,3 @@ def approve_user(body: ApproveRequest):
     users[body.username]["approved"] = True
     save_users(users)
     return {"message": f"{body.username} 승인 완료"}
-
-class MemoUpdate(BaseModel):
-    content: str
-    password: str
-
-def load_memo():
-    try:
-        with open("memo.json", "r", encoding="utf-8") as f:
-            return json.load(f)
-    except FileNotFoundError:
-        return {"content": ""}
-
-def save_memo(data):
-    with open("memo.json", "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
-
-
-@app.get("/memo")
-def get_memo():
-    return load_memo()
-
-
-@app.put("/memo")
-def update_memo(body: MemoUpdate):
-    check_password(body.password)
-    save_memo({"content": body.content})
-    return {"message": "메모가 저장되었습니다."}
