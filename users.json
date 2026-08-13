@@ -1,7 +1,7 @@
 {
   "admin" :{
-    "hashed": "017b161aa81320825c61dacd033ca0d731f7ecd8adb150c783f3842599345c0",
-    "salt": "7642e6fa366032b279cb65205ac0001",
+    "hashed": "3017b161aa81320825c61dacd033ca0d731f7ecd8adb150c783f3842599345c0",
+    "salt": "07642e6fa366032b279cb65205ac0001",
     "approved": true
   }
 }
