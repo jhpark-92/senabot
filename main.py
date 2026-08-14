@@ -291,7 +291,7 @@ def update_deck(deck_name: str, update: DeckUpdate):
     특정 덱 하나의 정보를 통째로 덮어씀.
     수정 전/후 내용을 deck_history.json에 기록해서 "정정 내역" 탭에서 확인 가능하게 함.
     """
-    check_login(update.password)
+    check_login(update.username, update.password)
 
     guide_data = load_guide_data()
     before = guide_data.get(deck_name, {})
@@ -340,7 +340,7 @@ def get_memo():
 
 @app.put("/memo")
 def update_memo(body: MemoUpdate):
-    check_login(body.password)
+    check_login(body.username, body.password)
     save_memo({"content": body.content})
     return {"message": "메모가 저장되었습니다."}
 
@@ -362,7 +362,7 @@ def update_raid(category: str, update: RaidUpdate):
     카테고리 type이 "list"면 update.boss로 어떤 보스인지 지정해야 하고,
     "single"이면 boss 없이 content만 전체 교체한다.
     """
-    check_login(update.password)
+    check_login(update.username, update.password)
     raid_data = load_raid_data()
 
     if category not in raid_data:

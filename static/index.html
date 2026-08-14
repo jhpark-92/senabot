@@ -737,6 +737,7 @@ function initApp() {
       priority_note: document.getElementById('f-priority').value,
       equipment: document.getElementById('f-equipment').value,
       notes: document.getElementById('f-notes').value,
+      username: username,
       password: password,
     };
 
@@ -819,6 +820,7 @@ function initApp() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           content: document.getElementById('memoTextarea').value,
+          username: username,
           password: password
         })
       });
@@ -890,6 +892,7 @@ function initApp() {
           body: JSON.stringify({
             boss: bossName,
             content: document.getElementById('raidBossTextarea').value,
+            username: username,
             password: password
           })
         });
@@ -926,6 +929,7 @@ function initApp() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           content: document.getElementById('raidSingleTextarea-파괴신').value,
+          username: username,
           password: password
         })
       });
