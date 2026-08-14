@@ -91,16 +91,20 @@ ensure_data_files()
 # 비밀번호 관련 유틸리티
 # =========================================================
 
-# 덱 수정 / 메모장 / 레이드 저장 등에 쓰이는 "공유 비밀번호" (길드원 전체가 같이 사용)
-SHARED_PASSWORD = os.environ.get("SHARED_PASSWORD", "changeme")
 # 회원 승인/관리 기능에 쓰이는 "관리자 비밀번호"
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "changeme_admin")
 
-
-def check_password(password: str):
-    """공유 비밀번호 검증. 틀리면 403 에러를 발생시킴."""
-    if password != SHARED_PASSWORD:
-        raise HTTPException(status_code=403, detail="비밀번호가 올바르지 않습니다.")
+def check_login(username: str, password: str):
+    """
+    아이디+비밀번호가 실제 승인된 회원 계정인지 확인.
+    덱 수정, 메모 저장 등 "로그인한 회원이면 누구나 가능한" 작업에 사용.
+    """
+    users = load_users()
+    user = users.get(username)
+    if not user or not verify_password_hash(password, user["salt"], user["hashed"]):
+        raise HTTPException(status_code=403, detail="로그인 정보가 올바르지 않습니다.")
+    if not user.get("approved"):
+        raise HTTPException(status_code=403, detail="승인되지 않은 계정입니다.")
 
 
 def hash_password(password: str, salt: str = None):
@@ -220,11 +224,8 @@ class DeckUpdate(BaseModel):
     priority_note: str = ""
     equipment: str = ""
     notes: str = ""
+    username: str
     password: str  # 공유 비밀번호 (덱 수정 권한 확인용)
-
-
-class PasswordCheck(BaseModel):
-    password: str
 
 
 class SignupRequest(BaseModel):
@@ -249,12 +250,14 @@ class RevokeRequest(BaseModel):
 
 class MemoUpdate(BaseModel):
     content: str
+    username: str
     password: str
 
 
 class RaidUpdate(BaseModel):
     boss: str | None = None   # "list" 타입 카테고리일 때만 사용 (예: "태오")
     content: str
+    username: str
     password: str
 
 
@@ -288,7 +291,7 @@ def update_deck(deck_name: str, update: DeckUpdate):
     특정 덱 하나의 정보를 통째로 덮어씀.
     수정 전/후 내용을 deck_history.json에 기록해서 "정정 내역" 탭에서 확인 가능하게 함.
     """
-    check_password(update.password)
+    check_login(update.password)
 
     guide_data = load_guide_data()
     before = guide_data.get(deck_name, {})
@@ -337,7 +340,7 @@ def get_memo():
 
 @app.put("/memo")
 def update_memo(body: MemoUpdate):
-    check_password(body.password)
+    check_login(body.password)
     save_memo({"content": body.content})
     return {"message": "메모가 저장되었습니다."}
 
@@ -359,7 +362,7 @@ def update_raid(category: str, update: RaidUpdate):
     카테고리 type이 "list"면 update.boss로 어떤 보스인지 지정해야 하고,
     "single"이면 boss 없이 content만 전체 교체한다.
     """
-    check_password(update.password)
+    check_login(update.password)
     raid_data = load_raid_data()
 
     if category not in raid_data:
@@ -389,16 +392,6 @@ async def chat_endpoint(req: ChatRequest):
     """
     answer = await ask(req.message)
     return {"answer": answer}
-
-
-# =========================================================
-# 사이트 접속 시 비밀번호 확인 (구버전 호환용)
-# =========================================================
-
-@app.post("/verify-password")
-def verify_password(body: PasswordCheck):
-    check_password(body.password)
-    return {"ok": True}
 
 
 # =========================================================

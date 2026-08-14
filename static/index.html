@@ -723,7 +723,8 @@ function initApp() {
     btn.disabled = true;
     status.textContent = '';
 
-    const password = localStorage.getItem('sena_bot_password');
+    const username = localStorage.getItem('sena_bot_username');
+    const password = localStorage.getItem('sena_bot_userpw');
     if (!password) {
       status.textContent = '로그인이 필요합니다.';
       status.className = 'save-status err';
@@ -806,7 +807,9 @@ function initApp() {
   document.getElementById('saveMemoBtn').addEventListener('click', async () => {
     const btn = document.getElementById('saveMemoBtn');
     const status = document.getElementById('memoStatus');
-    const password = localStorage.getItem('sena_bot_password');
+    const username = localStorage.getItem('sena_bot_username');
+    const password = localStorage.getItem('sena_bot_userpw');
+
     btn.disabled = true;
     status.textContent = '';
 
@@ -876,7 +879,8 @@ function initApp() {
     document.getElementById('raidBossSaveBtn').addEventListener('click', async () => {
       const btn = document.getElementById('raidBossSaveBtn');
       const status = document.getElementById('raidBossStatus');
-      const password = localStorage.getItem('sena_bot_password');
+      const username = localStorage.getItem('sena_bot_username');
+      const password = localStorage.getItem('sena_bot_userpw');
       btn.disabled = true;
       status.textContent = '';
       try {
@@ -912,7 +916,8 @@ function initApp() {
   document.getElementById('raidSingleSaveBtn-파괴신').addEventListener('click', async () => {
     const btn = document.getElementById('raidSingleSaveBtn-파괴신');
     const status = document.getElementById('raidSingleStatus-파괴신');
-    const password = localStorage.getItem('sena_bot_password');
+    const username = localStorage.getItem('sena_bot_username');
+    const password = localStorage.getItem('sena_bot_userpw');
     btn.disabled = true;
     status.textContent = '';
     try {
