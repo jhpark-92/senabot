@@ -18,6 +18,7 @@ import shutil
 import hashlib
 import secrets
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
 from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
@@ -311,7 +312,7 @@ def update_deck(deck_name: str, update: DeckUpdate):
         "deck_name": deck_name,
         "before": before,
         "after": after,
-        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M"),
+        "timestamp": datetime.now(ZoneInfo("Asia/Seoul")).strftime("%Y-%m-%d %H:%M"),
     })
     save_deck_history(history)
 
