@@ -313,6 +313,7 @@ def update_deck(deck_name: str, update: DeckUpdate):
         "before": before,
         "after": after,
         "timestamp": datetime.now(ZoneInfo("Asia/Seoul")).strftime("%Y-%m-%d %H:%M"),
+        "username": update.username,   # 이 줄 추가
     })
     save_deck_history(history)
 

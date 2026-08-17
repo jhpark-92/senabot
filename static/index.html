@@ -784,7 +784,7 @@ function initApp() {
         return `
           <div class="correction-item">
             <div class="deck-title">${h.deck_name}</div>
-            <div class="timestamp">${h.timestamp}</div>
+            <div class="timestamp">${h.timestamp} · ${h.username || '알 수 없음'}</div>
             <div>변경된 항목: <span class="changed">${changedFields.join(', ') || '없음'}</span></div>
           </div>
         `;
