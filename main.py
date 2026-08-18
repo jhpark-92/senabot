@@ -12,6 +12,7 @@
 8. 통합 수정 이력 ("정정 내역" 탭) — 덱 수정/추가/삭제, 메모, 레이드 저장을 전부 기록
 9. 활동 로그 ("사용자 관리" 탭) — 로그인/챗봇 질문/저장 작업 전부 기록, 60일 지난 로그는 자동 정리
 10. Railway Volume(영구 저장소) 대응
+11. 공지사항 및 첨부파일 업로드 지원
 """
 
 import os
@@ -22,7 +23,7 @@ import secrets
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, File, UploadFile, Form
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
@@ -67,6 +68,8 @@ def ensure_data_files():
     Volume 경로로 복사해서 채워준다. 이미 파일이 있으면 건드리지 않는다.
     """
     os.makedirs(DATA_DIR, exist_ok=True)
+    os.makedirs(path("uploads"), exist_ok=True)  # 업로드된 파일을 저장할 폴더 추가
+    
     defaults = {
         "guide_data.json": {},
         "history.json": [],
@@ -427,6 +430,7 @@ def read_index():
 
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
+app.mount("/uploads", StaticFiles(directory=path("uploads")), name="uploads") # 파일 업로드 디렉토리 마운트
 
 
 # =========================================================
@@ -708,6 +712,10 @@ def get_activity_log(username: str, password: str, username_filter: str = ""):
     return list(reversed(logs))
 
 
+# =========================================================
+# 공지사항 관리 (파일 업로드 지원)
+# =========================================================
+
 def load_notices():
     try:
         with open(path("notices.json"), "r", encoding="utf-8") as f:
@@ -719,13 +727,6 @@ def load_notices():
 def save_notices(notices):
     with open(path("notices.json"), "w", encoding="utf-8") as f:
         json.dump(notices, f, ensure_ascii=False, indent=2)
-
-
-class NoticeCreate(BaseModel):
-    title: str
-    content: str
-    username: str
-    password: str
 
 
 class NoticeDelete(BaseModel):
@@ -741,22 +742,38 @@ def get_notices():
 
 
 @app.post("/notices")
-def create_notice(body: NoticeCreate):
-    """새 공지사항 등록. admin만 가능."""
-    check_admin_login(body.username, body.password)
+async def create_notice(
+    title: str = Form(...),
+    content: str = Form(...),
+    username: str = Form(...),
+    password: str = Form(...),
+    file: UploadFile | None = File(None)
+):
+    """새 공지사항 등록 및 첨부파일 처리. admin만 가능."""
+    check_admin_login(username, password)
+
+    file_url = None
+    if file and file.filename:
+        ext = file.filename.split('.')[-1]
+        filename = f"notice_{secrets.token_hex(4)}.{ext}"
+        file_path = path(os.path.join("uploads", filename))
+        with open(file_path, "wb") as f:
+            f.write(await file.read())
+        file_url = f"/uploads/{filename}"
 
     notices = load_notices()
     new_id = (max([n["id"] for n in notices], default=0)) + 1
     notices.append({
         "id": new_id,
-        "title": body.title,
-        "content": body.content,
-        "username": body.username,
+        "title": title,
+        "content": content,
+        "file_url": file_url,
+        "username": username,
         "timestamp": now_kst(),
     })
     save_notices(notices)
 
-    add_activity_log("save", body.username, f"공지 등록: {body.title}")
+    add_activity_log("save", username, f"공지 등록: {title}")
 
     return {"message": "공지사항이 등록되었습니다."}
 

@@ -144,7 +144,7 @@
   /* ===== 덱 수정/추가 / 레이드 편집 공용 폼 스타일 ===== */
   .edit-form label { display: block; color: var(--text); font-size: 12.5px; font-weight: 600; margin: 14px 0 6px; }
   .edit-form label:first-child { margin-top: 0; }
-  .edit-form input[type=text], .edit-form textarea, .plain-textarea {
+  .edit-form input[type=text], .edit-form textarea, .plain-textarea, .edit-form input[type=file] {
     width: 100%; background: var(--bg); border: 1px solid var(--border);
     border-radius: 5px; padding: 9px 11px; color: var(--text); font-size: 13.5px;
     font-family: inherit; resize: vertical;
@@ -320,7 +320,7 @@
 
   <div class="tabs">
     <div class="tab active" data-view="chat">챗봇</div>
-    <!-- <div class="tab" data-view="notices">공지사항</div> -->
+    <div class="tab" data-view="notices">공지사항</div>
     <div class="tab" data-view="guide">가이드 보기</div>
     <div class="tab" data-view="edit">덱 수정</div> 
     <div class="tab" data-view="raid-강림">강림</div>
@@ -425,9 +425,8 @@
       <h3 class="admin-section-title">승인 대기 중인 사용자</h3>
       <div id="pendingList"></div>
 
-      <h3 class="admin-section-title" style="margin-top:24px;">전체 회원 목록</h3>
+      <h3 class="admin-section-title" style="margin-top:24px;">전체 회원 목록 <span id="allUsersCount" style="font-size:13px; color:var(--text-dim); font-weight:normal;"></span></h3>
       <div id="allUsersList"></div>
-
     </section>
 
     <!-- ---------- 활동 로그 탭 (admin 전용) ---------- -->
@@ -442,16 +441,29 @@
 
     <!-- ---------- 공지사항 ---------- -->
     <section id="view-notices" class="view">
+      <div id="noticeHeader" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+        <h3 class="admin-section-title" style="margin:0;">공지사항</h3>
+        <button id="showNoticeWriteBtn" class="save-btn" style="margin:0; padding:6px 14px; font-size:12px; display:none;">글쓰기</button>
+      </div>
+
+      <!-- 공지사항 쓰기 영역 -->
       <div id="noticeWriteBox" style="display:none; margin-bottom:20px;">
         <div class="edit-form">
           <label>제목</label>
           <input type="text" id="noticeTitleInput" />
           <label>내용</label>
           <textarea id="noticeContentInput" rows="4"></textarea>
-          <button class="save-btn" id="createNoticeBtn">등록</button>
+          <label>첨부 파일 (이미지 등)</label>
+          <input type="file" id="noticeFileInput" accept="image/*,.pdf,.txt,.zip" />
+          <div class="btn-row" style="margin-top:18px;">
+            <button class="save-btn" id="createNoticeBtn" style="margin-top:0;">등록</button>
+            <button class="save-btn" id="cancelNoticeWriteBtn" style="margin-top:0; background:var(--panel-hover); color:var(--text);">취소</button>
+          </div>
           <div class="save-status" id="noticeStatus"></div>
         </div>
       </div>
+
+      <!-- 공지사항 목록 영역 -->
       <div id="noticesList"></div>
     </section>
 
@@ -1212,6 +1224,8 @@ function initApp() {
 
   // 전체 회원 목록 렌더링: 승인 상태 표시 + "삭제" 버튼 (admin 계정 본인은 삭제 버튼 숨김)
   function renderAllUsers(users, adminUsername, adminPassword) {
+    document.getElementById('allUsersCount').textContent = `(총 ${users.length}명)`;
+
     const listEl = document.getElementById('allUsersList');
     if (!users.length) {
       listEl.innerHTML = '<div class="empty-state">등록된 회원이 없습니다.</div>';
@@ -1243,6 +1257,7 @@ function initApp() {
           });
           if (!res.ok) throw new Error();
           btn.closest('.pending-item').remove();
+          loadAdminData(); // 인원수 갱신을 위해 데이터 다시 로드
         } catch (e) {
           btn.disabled = false;
           alert('삭제에 실패했습니다.');
@@ -1285,10 +1300,32 @@ function initApp() {
   }
 }
 
+  // ===== 공지사항 관리 =====
+  document.getElementById('showNoticeWriteBtn').addEventListener('click', () => {
+    document.getElementById('noticesList').style.display = 'none';
+    document.getElementById('showNoticeWriteBtn').style.display = 'none';
+    document.getElementById('noticeWriteBox').style.display = 'block';
+  });
+
+  document.getElementById('cancelNoticeWriteBtn').addEventListener('click', () => {
+    document.getElementById('noticeWriteBox').style.display = 'none';
+    document.getElementById('noticesList').style.display = 'block';
+    document.getElementById('showNoticeWriteBtn').style.display = 'inline-block';
+    
+    document.getElementById('noticeTitleInput').value = '';
+    document.getElementById('noticeContentInput').value = '';
+    document.getElementById('noticeFileInput').value = '';
+    document.getElementById('noticeStatus').textContent = '';
+  });
+
   async function loadNotices() {
     const { username } = getAuth();
+    const writeBtn = document.getElementById('showNoticeWriteBtn');
+    
     if (username === 'admin') {
-      document.getElementById('noticeWriteBox').style.display = 'block';
+      writeBtn.style.display = 'inline-block';
+    } else {
+      writeBtn.style.display = 'none';
     }
 
     const res = await fetch('/notices');
@@ -1300,17 +1337,28 @@ function initApp() {
       return;
     }
 
-    listEl.innerHTML = notices.map(n => `
+    listEl.innerHTML = notices.map(n => {
+      let fileHTML = '';
+      if (n.file_url) {
+        const ext = n.file_url.split('.').pop().toLowerCase();
+        if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) {
+          fileHTML = `<div style="margin-top:10px;"><img src="${n.file_url}" style="max-width:100%; max-height:400px; border-radius:4px;" /></div>`;
+        } else {
+          fileHTML = `<div style="margin-top:10px;"><a href="${n.file_url}" target="_blank" style="color:var(--gold); text-decoration:underline;">📎 첨부파일 보기/다운로드</a></div>`;
+        }
+      }
+      return `
       <div class="correction-item">
         <div class="deck-title">${n.title}</div>
         <div class="timestamp">${n.timestamp} · ${n.username}</div>
         <div class="detail-field-value" style="margin-top:8px;">${n.content}</div>
+        ${fileHTML}
         ${username === 'admin' ? `<button class="save-btn danger-save-btn" style="margin-top:10px; padding: 6px 14px; font-size:12px;" data-id="${n.id}">삭제</button>` : ''}
       </div>
-    `).join('');
+    `}).join('');
 
     if (username === 'admin') {
-      listEl.querySelectorAll('button').forEach(btn => {
+      listEl.querySelectorAll('.danger-save-btn').forEach(btn => {
         btn.addEventListener('click', async () => {
           if (!confirm('이 공지사항을 삭제하시겠습니까?')) return;
           const { username, password } = getAuth();
@@ -1329,24 +1377,42 @@ function initApp() {
     const status = document.getElementById('noticeStatus');
     const title = document.getElementById('noticeTitleInput').value.trim();
     const content = document.getElementById('noticeContentInput').value.trim();
+    const fileInput = document.getElementById('noticeFileInput');
+
     if (!title || !content) {
       status.textContent = '제목과 내용을 입력해주세요.';
       status.className = 'save-status err';
       return;
     }
+    
     const { username, password } = getAuth();
+
+    const formData = new FormData();
+    formData.append('title', title);
+    formData.append('content', content);
+    formData.append('username', username);
+    formData.append('password', password);
+
+    if (fileInput.files.length > 0) {
+      formData.append('file', fileInput.files[0]);
+    }
 
     try {
       const res = await fetch('/notices', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, content, username, password })
+        body: formData
       });
       if (!res.ok) throw new Error();
+      
       document.getElementById('noticeTitleInput').value = '';
       document.getElementById('noticeContentInput').value = '';
-      status.textContent = '등록되었습니다.';
-      status.className = 'save-status ok';
+      fileInput.value = '';
+      status.textContent = '';
+      
+      document.getElementById('noticeWriteBox').style.display = 'none';
+      document.getElementById('noticesList').style.display = 'block';
+      document.getElementById('showNoticeWriteBtn').style.display = 'inline-block';
+
       loadNotices();
     } catch (e) {
       status.textContent = '등록에 실패했습니다.';
