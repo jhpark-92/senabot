@@ -10,7 +10,8 @@
 6. 공유 메모장
 7. 레이드 공략 (강림 / 파괴신 / 돌발레이드)
 8. 통합 수정 이력 ("정정 내역" 탭) — 덱 수정/추가/삭제, 메모, 레이드 저장을 전부 기록
-9. Railway Volume(영구 저장소) 대응
+9. 활동 로그 ("사용자 관리" 탭) — 로그인/챗봇 질문/저장 작업 전부 기록, 60일 지난 로그는 자동 정리
+10. Railway Volume(영구 저장소) 대응
 """
 
 import os
@@ -18,7 +19,7 @@ import json
 import shutil
 import hashlib
 import secrets
-from datetime import datetime
+from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 from fastapi import FastAPI, HTTPException
@@ -71,6 +72,7 @@ def ensure_data_files():
         "history.json": [],
         "users.json": {},
         "memo.json": {"content": ""},
+        "activity_log.json": [],
         "raid_data.json": {
             "강림": {
                 "type": "list",
@@ -96,6 +98,7 @@ def ensure_data_files():
                 # 아무 데이터도 없으면 빈 값으로 새로 생성
                 with open(dest, "w", encoding="utf-8") as f:
                     json.dump(empty_value, f, ensure_ascii=False, indent=2)
+
     # ---- 1회성 마이그레이션: 예전 deck_history.json -> 새 history.json ----
     # history.json이 비어있는 상태에서, 예전 형식의 deck_history.json이
     # 남아있으면(Volume 안에 예전 데이터가 있으면) 새 통합 형식으로 변환해서 합친다.
@@ -115,7 +118,7 @@ def ensure_data_files():
                 migrated.append({
                     "type": "deck",
                     "target": entry.get("deck_name", "알 수 없음"),
-                    "username": entry.get("username", ""),  # 예전 기록엔 없을 수도 있음
+                    "username": entry.get("username", ""),
                     "timestamp": entry.get("timestamp", ""),
                     "before": entry.get("before"),
                     "after": entry.get("after"),
@@ -125,6 +128,7 @@ def ensure_data_files():
                 json.dump(migrated, f, ensure_ascii=False, indent=2)
 
             print(f"[마이그레이션] deck_history.json {len(migrated)}건을 history.json으로 이전 완료")
+
 
 ensure_data_files()
 
@@ -167,6 +171,11 @@ def check_login(username: str, password: str):
     if not user.get("approved"):
         raise HTTPException(status_code=403, detail="승인되지 않은 계정입니다.")
 
+def check_admin_login(username: str, password: str):
+    """로그인 정보가 유효하고, 그 계정이 admin인지 확인 (관리자 전용 기능 보호용)"""
+    check_login(username, password)
+    if username != "admin":
+        raise HTTPException(status_code=403, detail="관리자 권한이 없습니다.")
 
 # =========================================================
 # 가이드 데이터 (guide_data.json) — 덱별 카운터 조합 정보
@@ -186,7 +195,7 @@ def save_guide_data(data):
 # 통합 수정 이력 (history.json) — "정정 내역" 탭에 표시됨
 #
 # 덱 수정 / 덱 추가 / 덱 삭제 / 메모 저장 / 레이드 저장 등
-# 모든 저장 동작을 한 곳에 기록한다.
+# "실제 데이터가 바뀐" 저장 동작만 기록한다. (활동 전체 로그는 activity_log.json 참고)
 #
 # 각 기록의 형태:
 # {
@@ -224,6 +233,60 @@ def add_history_entry(entry_type: str, target: str, username: str, before, after
         "after": after,
     })
     save_history(history)
+
+
+# =========================================================
+# 활동 로그 (activity_log.json) — "사용자 관리" 탭에서 admin이 조회
+#
+# 로그인 / 챗봇 질문 / 저장 작업(덱·메모·레이드) 등 "누가 언제 무엇을 했는지"를
+# history.json보다 더 넓은 범위로 기록한다 (로그인, 챗봇 질문까지 포함).
+# 60일이 지난 로그는 새 로그가 추가될 때마다 자동으로 정리된다.
+#
+# 각 기록의 형태:
+# {"type": "login" | "chat" | "save", "username": "...", "timestamp": "...", "detail": "..."}
+# =========================================================
+
+LOG_RETENTION_DAYS = 60
+
+
+def load_activity_log():
+    try:
+        with open(path("activity_log.json"), "r", encoding="utf-8") as f:
+            return json.load(f)
+    except FileNotFoundError:
+        return []
+
+
+def save_activity_log(logs):
+    with open(path("activity_log.json"), "w", encoding="utf-8") as f:
+        json.dump(logs, f, ensure_ascii=False, indent=2)
+
+
+def cleanup_old_logs(logs, days: int = LOG_RETENTION_DAYS):
+    """timestamp가 days일보다 오래된 로그를 제거. 형식이 깨진 로그는 안전하게 유지."""
+    cutoff = datetime.now(KST) - timedelta(days=days)
+    kept = []
+    for log in logs:
+        try:
+            log_time = datetime.strptime(log["timestamp"], "%Y-%m-%d %H:%M").replace(tzinfo=KST)
+            if log_time >= cutoff:
+                kept.append(log)
+        except (ValueError, KeyError):
+            kept.append(log)
+    return kept
+
+
+def add_activity_log(log_type: str, username: str, detail: str = ""):
+    """로그인/챗봇 질문/저장 작업 등 모든 활동을 기록. 기록할 때마다 60일 지난 로그를 함께 정리."""
+    logs = load_activity_log()
+    logs.append({
+        "type": log_type,
+        "username": username,
+        "timestamp": now_kst(),
+        "detail": detail,
+    })
+    logs = cleanup_old_logs(logs)
+    save_activity_log(logs)
 
 
 # =========================================================
@@ -287,6 +350,7 @@ def save_raid_data(data):
 
 class ChatRequest(BaseModel):
     message: str
+    username: str = ""  # 활동 로그에 "누가 물어봤는지" 기록하기 위해 사용 (없어도 동작은 함)
 
 
 class DeckUpdate(BaseModel):
@@ -328,11 +392,13 @@ class LoginRequest(BaseModel):
 
 class ApproveRequest(BaseModel):
     username: str
+    password: str
     admin_password: str
 
 
 class RevokeRequest(BaseModel):
     username: str
+    password: str
     admin_password: str
 
 
@@ -377,7 +443,7 @@ def get_guide():
 def update_deck(deck_name: str, update: DeckUpdate):
     """
     기존 덱 하나의 정보를 통째로 덮어씀.
-    수정 전/후 내용을 통합 이력(history.json)에 "deck" 타입으로 기록.
+    수정 전/후 내용을 통합 이력(history.json)과 활동 로그에 각각 기록.
     """
     check_login(update.username, update.password)
 
@@ -394,6 +460,7 @@ def update_deck(deck_name: str, update: DeckUpdate):
     save_guide_data(guide_data)
 
     add_history_entry("deck", deck_name, update.username, before, after)
+    add_activity_log("save", update.username, f"덱 수정: {deck_name}")
 
     return {"message": f"{deck_name} 정보가 수정되었습니다."}
 
@@ -421,6 +488,7 @@ def create_deck(body: DeckCreate):
 
     # 신규 추가라 "이전 상태"가 없으므로 before는 None
     add_history_entry("deck_create", body.deck_name, body.username, None, after)
+    add_activity_log("save", body.username, f"덱 추가: {body.deck_name}")
 
     return {"message": f"{body.deck_name} 덱이 추가되었습니다."}
 
@@ -444,6 +512,7 @@ def delete_deck(deck_name: str, body: DeckDelete):
 
     # 삭제라 "이후 상태"가 없으므로 after는 None
     add_history_entry("deck_delete", deck_name, body.username, before, None)
+    add_activity_log("save", body.username, f"덱 삭제: {deck_name}")
 
     return {"message": f"{deck_name} 덱이 삭제되었습니다."}
 
@@ -470,7 +539,7 @@ def get_memo():
 
 @app.put("/memo")
 def update_memo(body: MemoUpdate):
-    """메모장 내용 저장. 저장할 때마다 이력에도 기록."""
+    """메모장 내용 저장. 저장할 때마다 이력/활동 로그에도 기록."""
     check_login(body.username, body.password)
 
     before = load_memo()
@@ -478,6 +547,7 @@ def update_memo(body: MemoUpdate):
     save_memo(after)
 
     add_history_entry("memo", "메모장", body.username, before.get("content", ""), body.content)
+    add_activity_log("save", body.username, "메모 저장")
 
     return {"message": "메모가 저장되었습니다."}
 
@@ -523,6 +593,7 @@ def update_raid(category: str, update: RaidUpdate):
     save_raid_data(raid_data)
 
     add_history_entry("raid", target_label, update.username, before, after)
+    add_activity_log("save", update.username, f"레이드 저장: {target_label}")
 
     return {"message": "저장되었습니다."}
 
@@ -536,8 +607,10 @@ async def chat_endpoint(req: ChatRequest):
     """
     사용자 메시지를 chat_logic.ask()로 전달.
     내부적으로 Gemini + MCP 도구(get_guide)를 통해 가이드 데이터를 참고해 답변 생성.
+    질문 내용도 활동 로그에 남긴다.
     """
     answer = await ask(req.message)
+    add_activity_log("chat", req.username, req.message)
     return {"answer": answer}
 
 
@@ -564,26 +637,28 @@ def signup(body: SignupRequest):
 
 @app.post("/login")
 def login(body: LoginRequest):
-    """아이디+비밀번호 확인 후, 승인된 계정만 로그인 허용"""
+    """아이디+비밀번호 확인 후, 승인된 계정만 로그인 허용. 로그인 성공 시 활동 로그에 기록."""
     users = load_users()
     user = users.get(body.username)
     if not user or not verify_password_hash(body.password, user["salt"], user["hashed"]):
         raise HTTPException(status_code=403, detail="아이디 또는 비밀번호가 올바르지 않습니다.")
     if not user.get("approved"):
         raise HTTPException(status_code=403, detail="아직 관리자 승인 대기 중입니다.")
+
+    add_activity_log("login", body.username)
+
     return {"ok": True}
 
 
 # =========================================================
-# 관리자 전용: 회원 승인 / 관리
+# 관리자 전용: 회원 승인 / 관리 / 활동 로그 조회
 # 모든 엔드포인트가 admin_password(ADMIN_PASSWORD)로 별도 보호됨
 # =========================================================
 
 @app.get("/pending-users")
-def pending_users(admin_password: str):
+def pending_users(username: str, password: str):
     """승인 대기 중인 사용자 아이디 목록 반환"""
-    if admin_password != ADMIN_PASSWORD:
-        raise HTTPException(status_code=403, detail="관리자 비밀번호가 틀렸습니다.")
+    check_admin_login(username, password)
     users = load_users()
     return [u for u, v in users.items() if not v.get("approved")]
 
@@ -591,8 +666,7 @@ def pending_users(admin_password: str):
 @app.post("/approve-user")
 def approve_user(body: ApproveRequest):
     """대기 중인 사용자를 승인 상태로 전환"""
-    if body.admin_password != ADMIN_PASSWORD:
-        raise HTTPException(status_code=403, detail="관리자 비밀번호가 틀렸습니다.")
+    check_admin_login(body.admin_username, body.password)
     users = load_users()
     if body.username not in users:
         raise HTTPException(status_code=404, detail="존재하지 않는 사용자입니다.")
@@ -602,19 +676,17 @@ def approve_user(body: ApproveRequest):
 
 
 @app.get("/all-users")
-def all_users(admin_password: str):
-    """전체 회원 목록(아이디 + 승인 상태)을 반환 — "사용자 관리" 탭에서 사용"""
-    if admin_password != ADMIN_PASSWORD:
-        raise HTTPException(status_code=403, detail="관리자 비밀번호가 틀렸습니다.")
+def all_users(username: str, password: str):
+    """전체 회원 목록(아이디 + 승인 상태)을 반환"""
+    check_admin_login(username, password)
     users = load_users()
     return [{"username": u, "approved": v.get("approved", False)} for u, v in users.items()]
 
 
 @app.post("/revoke-user")
 def revoke_user(body: RevokeRequest):
-    """회원 계정을 완전히 삭제 (강제 탈퇴). admin 계정 자신은 삭제 불가하도록 보호."""
-    if body.admin_password != ADMIN_PASSWORD:
-        raise HTTPException(status_code=403, detail="관리자 비밀번호가 틀렸습니다.")
+    """회원 계정을 완전히 삭제"""
+    check_admin_login(body.admin_username, body.password)
     users = load_users()
     if body.username not in users:
         raise HTTPException(status_code=404, detail="존재하지 않는 사용자입니다.")
@@ -623,3 +695,13 @@ def revoke_user(body: RevokeRequest):
     del users[body.username]
     save_users(users)
     return {"message": f"{body.username} 계정이 삭제되었습니다."}
+
+
+@app.get("/activity-log")
+def get_activity_log(username: str, password: str, username_filter: str = ""):
+    """전체 활동 로그를 최신순으로 반환"""
+    check_admin_login(username, password)
+    logs = load_activity_log()
+    if username_filter:
+        logs = [l for l in logs if l["username"] == username_filter]
+    return list(reversed(logs))

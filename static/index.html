@@ -420,18 +420,19 @@
 
     <!-- ---------- 사용자 관리 탭 (admin 전용) ---------- -->
     <section id="view-admin" class="view">
-      <div id="adminGateBox" class="admin-gate">
-        <input id="adminPasswordInput" type="password" placeholder="관리자 비밀번호" />
-        <button id="adminUnlockBtn">확인</button>
-        <div id="adminGateMsg" style="font-size:12.5px; color: var(--danger);"></div>
-      </div>
-      <div id="adminPanel" style="display:none;">
-        <h3 class="admin-section-title">승인 대기 중인 사용자</h3>
-        <div id="pendingList"></div>
+      <h3 class="admin-section-title">승인 대기 중인 사용자</h3>
+      <div id="pendingList"></div>
 
-        <h3 class="admin-section-title" style="margin-top:24px;">전체 회원 목록</h3>
-        <div id="allUsersList"></div>
+      <h3 class="admin-section-title" style="margin-top:24px;">전체 회원 목록</h3>
+      <div id="allUsersList"></div>
+
+      <h3 class="admin-section-title" style="margin-top:24px;">활동 로그 (최근 60일)</h3>
+      <div style="margin-bottom:10px;">
+        <select id="logUserFilter" style="background: var(--panel); border: 1px solid var(--border); border-radius: 5px; padding: 8px 12px; color: var(--text); font-size: 13px;">
+          <option value="">전체 계정</option>
+        </select>
       </div>
+      <div id="activityLogList"></div>
     </section>
 
   </main>
@@ -595,6 +596,7 @@ function initApp() {
       if (tab.dataset.view === 'raid-강림') loadRaidList('강림');
       if (tab.dataset.view === 'raid-돌발레이드') loadRaidList('돌발레이드');
       if (tab.dataset.view === 'raid-파괴신') loadRaidSingle('파괴신');
+      if (tab.dataset.view === 'admin') loadAdminData();
     });
   });
 
@@ -646,11 +648,13 @@ function initApp() {
       sendBtn.disabled = false;
     }, 30000);
 
+    const { username } = getAuth();
+
     try {
       const res = await fetch('/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: text })
+        body: JSON.stringify({ message: text, username: username })
       });
       clearTimeout(timeoutId);
       if (!res.ok) throw new Error('서버 오류: ' + res.status);
@@ -1109,30 +1113,30 @@ function initApp() {
   /* -------------------- 8. 사용자 관리 (admin 전용) -------------------- */
 
   // 관리자 비밀번호 확인 -> 승인 대기 목록 + 전체 회원 목록을 함께 불러옴
-  document.getElementById('adminUnlockBtn').addEventListener('click', async () => {
-    const adminPw = document.getElementById('adminPasswordInput').value;
-    const msgEl = document.getElementById('adminGateMsg');
+  // "사용자 관리" 탭 진입 시 자동으로 데이터 불러오기 (admin 계정만 이 탭이 보이므로 별도 비밀번호 불필요)
+  async function loadAdminData() {
+    const { username, password } = getAuth();
     try {
-      const [pendingRes, allRes] = await Promise.all([
-        fetch('/pending-users?admin_password=' + encodeURIComponent(adminPw)),
-        fetch('/all-users?admin_password=' + encodeURIComponent(adminPw)),
+      const [pendingRes, allRes, logRes] = await Promise.all([
+        fetch(`/pending-users?username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`),
+        fetch(`/all-users?username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`),
+        fetch(`/activity-log?username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`),
       ]);
       const pendingData = await pendingRes.json();
       const allData = await allRes.json();
+      const logData = await logRes.json();
       if (!pendingRes.ok) throw new Error(pendingData.detail);
 
-      sessionStorage.setItem('sena_bot_admin_pw', adminPw);
-      document.getElementById('adminGateBox').style.display = 'none';
-      document.getElementById('adminPanel').style.display = 'block';
-      renderPendingUsers(pendingData, adminPw);
-      renderAllUsers(allData, adminPw);
+      renderPendingUsers(pendingData, username, password);
+      renderAllUsers(allData, username, password);
+      renderActivityLog(logData, allData, username, password);
     } catch (e) {
-      msgEl.textContent = e.message;
+      document.getElementById('pendingList').innerHTML = `<div class="empty-state">${e.message}</div>`;
     }
-  });
+  }
 
   // 승인 대기 목록 렌더링: "승인" 버튼 누르면 /approve-user 호출
-  function renderPendingUsers(usernames, adminPw) {
+  function renderPendingUsers(usernames, adminUsername, adminPassword) {
     const listEl = document.getElementById('pendingList');
     if (!usernames.length) {
       listEl.innerHTML = '<div class="empty-state">승인 대기 중인 사용자가 없습니다.</div>';
@@ -1151,7 +1155,11 @@ function initApp() {
           const res = await fetch('/approve-user', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username: btn.dataset.username, admin_password: adminPw })
+            body: JSON.stringify({
+              username: btn.dataset.username,
+              password: adminPassword,
+              admin_username: adminUsername
+            })
           });
           if (!res.ok) throw new Error();
           btn.closest('.pending-item').remove();
@@ -1164,7 +1172,7 @@ function initApp() {
   }
 
   // 전체 회원 목록 렌더링: 승인 상태 표시 + "삭제" 버튼 (admin 계정 본인은 삭제 버튼 숨김)
-  function renderAllUsers(users, adminPw) {
+  function renderAllUsers(users, adminUsername, adminPassword) {
     const listEl = document.getElementById('allUsersList');
     if (!users.length) {
       listEl.innerHTML = '<div class="empty-state">등록된 회원이 없습니다.</div>';
@@ -1188,7 +1196,11 @@ function initApp() {
           const res = await fetch('/revoke-user', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username: btn.dataset.username, admin_password: adminPw })
+            body: JSON.stringify({
+              username: btn.dataset.username,
+              password: adminPassword,
+              admin_username: adminUsername
+            })
           });
           if (!res.ok) throw new Error();
           btn.closest('.pending-item').remove();
@@ -1197,6 +1209,49 @@ function initApp() {
           alert('삭제에 실패했습니다.');
         }
       });
+    });
+  }
+
+  // 활동 로그 렌더링: 로그인/챗봇 질문/저장 작업 전부 표시, 계정별 드롭다운 필터 지원
+  function renderActivityLog(logs, allUsers, adminUsername, adminPassword) {
+    const filterEl = document.getElementById('logUserFilter');
+    filterEl.innerHTML = '<option value="">전체 계정</option>' +
+      allUsers.map(u => `<option value="${u.username}">${u.username}</option>`).join('');
+
+    const typeLabels = { login: '로그인', chat: '챗봇 질문', save: '저장' };
+
+    function render(filteredLogs) {
+      const listEl = document.getElementById('activityLogList');
+      if (!filteredLogs.length) {
+        listEl.innerHTML = '<div class="empty-state">활동 로그가 없습니다.</div>';
+        return;
+      }
+      listEl.innerHTML = filteredLogs.map(l => `
+        <div class="correction-item">
+          <div class="deck-title">${l.username || '알 수 없음'}<span class="type-badge deck">${typeLabels[l.type] || l.type}</span></div>
+          <div class="timestamp">${l.timestamp}</div>
+          ${l.detail ? `<div class="detail-field-value">${l.detail}</div>` : ''}
+        </div>
+      `).join('');
+    }
+
+    render(logs);
+
+    filterEl.addEventListener('change', async () => {
+      const username = filterEl.value;
+      const res = await fetch(`/activity-log?username=${encodeURIComponent(adminUsername)}&password=${encodeURIComponent(adminPassword)}&username_filter=${encodeURIComponent(username)}`);
+      const filtered = await res.json();
+      render(filtered);
+    });
+  }
+
+    render(logs);
+
+    filterEl.addEventListener('change', async () => {
+      const username = filterEl.value;
+      const res = await fetch('/activity-log?admin_password=' + encodeURIComponent(adminPw) + '&username_filter=' + encodeURIComponent(username));
+      const filtered = await res.json();
+      render(filtered);
     });
   }
 }
