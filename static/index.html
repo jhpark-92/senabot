@@ -1244,16 +1244,6 @@ function initApp() {
       render(filtered);
     });
   }
-
-    render(logs);
-
-    filterEl.addEventListener('change', async () => {
-      const username = filterEl.value;
-      const res = await fetch('/activity-log?admin_password=' + encodeURIComponent(adminPw) + '&username_filter=' + encodeURIComponent(username));
-      const filtered = await res.json();
-      render(filtered);
-    });
-  }
 }
 </script>
 
