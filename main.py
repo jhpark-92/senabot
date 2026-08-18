@@ -96,7 +96,35 @@ def ensure_data_files():
                 # 아무 데이터도 없으면 빈 값으로 새로 생성
                 with open(dest, "w", encoding="utf-8") as f:
                     json.dump(empty_value, f, ensure_ascii=False, indent=2)
+    # ---- 1회성 마이그레이션: 예전 deck_history.json -> 새 history.json ----
+    # history.json이 비어있는 상태에서, 예전 형식의 deck_history.json이
+    # 남아있으면(Volume 안에 예전 데이터가 있으면) 새 통합 형식으로 변환해서 합친다.
+    old_deck_history_path = path("deck_history.json")
+    history_path = path("history.json")
 
+    if os.path.exists(old_deck_history_path):
+        with open(history_path, "r", encoding="utf-8") as f:
+            current_history = json.load(f)
+
+        if not current_history:  # 아직 새 이력이 하나도 안 쌓인 상태일 때만 마이그레이션
+            with open(old_deck_history_path, "r", encoding="utf-8") as f:
+                old_entries = json.load(f)
+
+            migrated = []
+            for entry in old_entries:
+                migrated.append({
+                    "type": "deck",
+                    "target": entry.get("deck_name", "알 수 없음"),
+                    "username": entry.get("username", ""),  # 예전 기록엔 없을 수도 있음
+                    "timestamp": entry.get("timestamp", ""),
+                    "before": entry.get("before"),
+                    "after": entry.get("after"),
+                })
+
+            with open(history_path, "w", encoding="utf-8") as f:
+                json.dump(migrated, f, ensure_ascii=False, indent=2)
+
+            print(f"[마이그레이션] deck_history.json {len(migrated)}건을 history.json으로 이전 완료")
 
 ensure_data_files()
 
