@@ -104,7 +104,7 @@
   .view { display: none; }
   .view.active { display: block; }
 
-  /* ===== 마스터-디테일 레이아웃 (가이드 보기 / 덱 수정 / 강림 / 돌발레이드 공용) ===== */
+  /* ===== 마스터-디테일 레이아웃 (공통) ===== */
   .split { display: flex; gap: 16px; height: 68vh; }
   .deck-list {
     width: 240px; flex-shrink: 0; background: var(--panel);
@@ -141,7 +141,7 @@
     border-radius: 20px; padding: 4px 12px; font-size: 12.5px; color: var(--text);
   }
 
-  /* ===== 덱 수정/추가 / 레이드 편집 공용 폼 스타일 ===== */
+  /* ===== 편집 공용 폼 스타일 ===== */
   .edit-form label { display: block; color: var(--text); font-size: 12.5px; font-weight: 600; margin: 14px 0 6px; }
   .edit-form label:first-child { margin-top: 0; }
   .edit-form input[type=text], .edit-form textarea, .plain-textarea, .edit-form input[type=file] {
@@ -202,9 +202,10 @@
     display: inline-block; font-size: 10.5px; padding: 1px 7px; border-radius: 10px;
     margin-left: 8px; vertical-align: middle; font-weight: 600;
   }
-  .type-badge.deck { background: rgba(212,166,86,.18); color: var(--gold); }
-  .type-badge.deck_create { background: rgba(95,168,118,.18); color: var(--ok); }
-  .type-badge.deck_delete { background: rgba(193,88,79,.18); color: var(--danger); }
+  /* 이력 종류별 배지 색상 */
+  .type-badge.deck, .type-badge.defense { background: rgba(212,166,86,.18); color: var(--gold); }
+  .type-badge.deck_create, .type-badge.defense_create { background: rgba(95,168,118,.18); color: var(--ok); }
+  .type-badge.deck_delete, .type-badge.defense_delete { background: rgba(193,88,79,.18); color: var(--danger); }
   .type-badge.memo { background: rgba(95,168,118,.18); color: var(--ok); }
   .type-badge.raid { background: rgba(193,88,79,.18); color: var(--danger); }
   .correction-item .timestamp { color: var(--text-dim); font-size: 11.5px; margin-bottom: 6px; }
@@ -331,7 +332,7 @@
     <div class="emblem"></div>
     <div>
       <h1>세나봇</h1>
-      <div class="sub">길드전 공격팀 세팅 가이드 · 질의응답 &amp; 수정</div>
+      <div class="sub">길드전 공격/방어 세팅 가이드 · 질의응답 &amp; 수정</div>
     </div>
     <button class="logout-btn" id="logoutBtn">로그아웃</button>
   </div>
@@ -339,8 +340,12 @@
   <div class="tabs">
     <div class="tab active" data-view="chat">챗봇</div>
     <div class="tab" data-view="notices">공지사항</div>
-    <div class="tab" data-view="guide">가이드 보기</div>
-    <div class="tab" data-view="edit">덱 수정</div> 
+    <!-- 탭 명칭 변경: 가이드 보기 -> 공격 가이드, 덱 수정 -> 공격 가이드 수정 -->
+    <div class="tab" data-view="guide">공격 가이드</div>
+    <div class="tab" data-view="edit">공격 가이드 수정</div>
+    <!-- 방어 가이드 탭 추가 -->
+    <div class="tab" data-view="defense">방어 가이드</div>
+    
     <div class="tab" data-view="raid-강림">강림</div>
     <div class="tab" data-view="raid-파괴신">파괴신</div>
     <div class="tab" data-view="raid-돌발레이드">돌발레이드</div>
@@ -360,16 +365,16 @@
         <button id="sendBtn">전송</button>
       </div>
       <div class="hint">
-        <span>덱 정보 자체를 고치려면 "덱 수정" 탭을 이용하세요.</span>
+        <span>덱 정보 자체를 고치려면 "가이드 수정" 탭을 이용하세요.</span>
         <button class="clear-btn" id="clearChatBtn">대화 지우기</button>
       </div>
     </section>
 
-    <!-- ---------- 가이드 보기 탭 (읽기 전용) ---------- -->
+    <!-- ---------- 공격 가이드 탭 (읽기 전용) ---------- -->
     <section id="view-guide" class="view">
       <div class="split">
         <div class="deck-list">
-          <div class="search-box"><input id="guideSearch" type="text" placeholder="덱 이름 검색... (순서 상관없음)" /></div>
+          <div class="search-box"><input id="guideSearch" type="text" placeholder="공격 덱 이름 검색... (순서 상관없음)" /></div>
           <div id="guideListItems"></div>
         </div>
         <div class="detail-panel" id="guideDetail">
@@ -378,12 +383,11 @@
       </div>
     </section>
 
-    <!-- ---------- 덱 수정 탭 (편집 / 추가 / 삭제) ---------- -->
+    <!-- ---------- 공격 가이드 수정 탭 (편집 / 추가 / 삭제) ---------- -->
     <section id="view-edit" class="view">
       <div class="split">
         <div class="deck-list">
-          <div class="search-box"><input id="editSearch" type="text" placeholder="덱 이름 검색... (순서 상관없음)" /></div>
-          <!-- 새 덱 추가 버튼: 누르면 오른쪽에 빈 입력 폼이 뜬다 -->
+          <div class="search-box"><input id="editSearch" type="text" placeholder="공격 덱 이름 검색... (순서 상관없음)" /></div>
           <div class="new-deck-box">
             <button class="save-btn" id="newDeckBtn" style="margin-top:0; width:100%;">+ 새 덱 추가</button>
           </div>
@@ -395,7 +399,23 @@
       </div>
     </section>
 
-    <!-- ---------- 정정 내역 탭 (통합 이력: 덱 수정/추가/삭제, 메모, 레이드) ---------- -->
+    <!-- ---------- 방어 가이드 탭 (조회 + 편집/추가/삭제 통합) ---------- -->
+    <section id="view-defense" class="view">
+      <div class="split">
+        <div class="deck-list">
+          <div class="search-box"><input id="defenseSearch" type="text" placeholder="방어 덱 이름 검색... (순서 상관없음)" /></div>
+          <div class="new-deck-box">
+            <button class="save-btn" id="newDefenseBtn" style="margin-top:0; width:100%;">+ 새 방어 배치 추가</button>
+          </div>
+          <div id="defenseListItems"></div>
+        </div>
+        <div class="detail-panel" id="defenseDetail">
+          <div class="detail-empty">위/왼쪽에서 덱을 선택하세요</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---------- 정정 내역 탭 (통합 이력) ---------- -->
     <section id="view-corrections" class="view">
       <div id="correctionsList"></div>
     </section>
@@ -509,7 +529,6 @@ function setLockMsg(text, type) {
   lockMsg.className = type || '';
 }
 
-// 로그인 <-> 회원가입 화면 전환
 document.getElementById('showSignupBtn').addEventListener('click', () => {
   loginFields.classList.add('hidden');
   signupFields.classList.add('active');
@@ -521,7 +540,6 @@ document.getElementById('showLoginBtn').addEventListener('click', () => {
   setLockMsg('');
 });
 
-// 회원가입 신청: 서버에 아이디/비밀번호 등록 (승인 대기 상태로 생성됨)
 document.getElementById('signupBtn').addEventListener('click', async () => {
   const username = document.getElementById('signupUsername').value.trim();
   const password = document.getElementById('signupPassword').value;
@@ -545,7 +563,6 @@ document.getElementById('signupBtn').addEventListener('click', async () => {
   }
 });
 
-// 로그인 시도. silent=true면 실패해도 에러 메시지를 안 띄움 (자동 로그인 시도용)
 async function doLogin(username, password, silent) {
   try {
     const res = await fetch('/login', {
@@ -555,7 +572,6 @@ async function doLogin(username, password, silent) {
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.detail);
-    // 로그인 성공 시 브라우저에 저장 -> 다음 방문 때 자동 로그인 + 모든 저장 작업에 재사용
     localStorage.setItem('sena_bot_username', username);
     localStorage.setItem('sena_bot_userpw', password);
     showApp();
@@ -576,7 +592,6 @@ document.getElementById('loginBtn').addEventListener('click', () => {
   doLogin(username, password);
 });
 
-// Enter 키로도 로그인/가입 가능하게. isComposing 체크로 한글 입력 중 중복 전송 방지
 [document.getElementById('loginUsername'), document.getElementById('loginPassword')].forEach(el => {
   el.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing) document.getElementById('loginBtn').click(); });
 });
@@ -584,7 +599,6 @@ document.getElementById('loginBtn').addEventListener('click', () => {
   el.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing) document.getElementById('signupBtn').click(); });
 });
 
-// 페이지 로드 시: 저장된 로그인 정보가 있으면 자동 로그인 시도, 없으면 잠금화면 표시
 async function checkAccess() {
   const savedUser = localStorage.getItem('sena_bot_username');
   const savedPw = localStorage.getItem('sena_bot_userpw');
@@ -608,10 +622,10 @@ checkAccess();
    2. 메인 앱 초기화 (로그인 성공 후 1회만 실행)
 ============================================================= */
 let guideDataCache = null;
+let defenseDataCache = null;  // 방어 데이터 캐시 추가
 let raidDataCache = null;
 let appInitialized = false;
 
-// 저장/추가/삭제 요청마다 필요한 로그인 정보를 한 번에 꺼내는 헬퍼
 function getAuth() {
   return {
     username: localStorage.getItem('sena_bot_username'),
@@ -623,14 +637,12 @@ function initApp() {
   if (appInitialized) return;
   appInitialized = true;
 
-  // 로그아웃: 저장된 로그인 정보를 지우고 새로고침
   document.getElementById('logoutBtn').addEventListener('click', () => {
     localStorage.removeItem('sena_bot_username');
     localStorage.removeItem('sena_bot_userpw');
     location.reload();
   });
 
-  // admin 계정으로 로그인했을 때만 "메모장", "사용자 관리" 탭을 보이게 함
   const currentUsername = localStorage.getItem('sena_bot_username');
   if (currentUsername === 'admin') {
     document.getElementById('adminTab').style.display = 'block';
@@ -638,7 +650,6 @@ function initApp() {
     document.getElementById('logTab').style.display = 'block';
   }
 
-  // 탭 전환 처리: 클릭한 탭에 맞는 뷰를 보여주고, 필요하면 데이터를 새로 불러옴
   const tabs = document.querySelectorAll('.tab');
   const views = document.querySelectorAll('.view');
   tabs.forEach(tab => {
@@ -647,8 +658,10 @@ function initApp() {
       views.forEach(v => v.classList.remove('active'));
       tab.classList.add('active');
       document.getElementById('view-' + tab.dataset.view).classList.add('active');
+      
       if (tab.dataset.view === 'guide') loadGuide('guide');
       if (tab.dataset.view === 'edit') loadGuide('edit');
+      if (tab.dataset.view === 'defense') loadDefense(); // 방어 가이드 호출
       if (tab.dataset.view === 'corrections') loadCorrections();
       if (tab.dataset.view === 'memo') loadMemo();
       if (tab.dataset.view === 'raid-강림') loadRaidList('강림');
@@ -666,7 +679,6 @@ function initApp() {
   const sendBtn = document.getElementById('sendBtn');
   const clearChatBtn = document.getElementById('clearChatBtn');
 
-  // 대화 내용을 localStorage에 저장/복원 (새로고침해도 유지됨)
   function saveChatHistory() { localStorage.setItem('sena_bot_chat_history', chatLog.innerHTML); }
   function loadChatHistory() {
     const saved = localStorage.getItem('sena_bot_chat_history');
@@ -692,7 +704,6 @@ function initApp() {
     return bubble;
   }
 
-  // 메시지 전송: /chat 호출, 30초 넘게 응답 없으면 타임아웃 처리
   async function sendMessage() {
     const text = chatInput.value.trim();
     if (!text) return;
@@ -733,9 +744,9 @@ function initApp() {
   sendBtn.addEventListener('click', sendMessage);
   chatInput.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing) sendMessage(); });
 
-  /* -------------------- 4. 가이드 보기 / 덱 수정·추가·삭제 -------------------- */
+  /* -------------------- 4-1. 공격 가이드 (조회 및 수정) -------------------- */
+  function normalize(str) { return str.split('').sort().join(''); }
 
-  // /guide 데이터를 최초 1회만 불러와서 캐싱, 이후에는 캐시 재사용
   window.loadGuide = async function(mode) {
     if (!guideDataCache) {
       const res = await fetch('/guide');
@@ -745,10 +756,6 @@ function initApp() {
     renderDeckList(mode);
   };
 
-  // 문자열의 글자를 정렬해서 반환 -> 순서 상관없이 같은 글자 조합이면 매칭되게 함
-  function normalize(str) { return str.split('').sort().join(''); }
-
-  // 왼쪽 덱 목록을 검색어에 맞게 필터링해서 렌더링
   function renderDeckList(mode) {
     const listEl = document.getElementById(mode === 'guide' ? 'guideListItems' : 'editListItems');
     const searchEl = document.getElementById(mode === 'guide' ? 'guideSearch' : 'editSearch');
@@ -776,7 +783,6 @@ function initApp() {
   document.getElementById('guideSearch').addEventListener('input', () => renderDeckList('guide'));
   document.getElementById('editSearch').addEventListener('input', () => renderDeckList('edit'));
 
-  // "가이드 보기" 탭: 읽기 전용으로 덱 상세정보 표시
   function renderGuideDetail(deckName) {
     const d = guideDataCache[deckName];
     const detail = document.getElementById('guideDetail');
@@ -793,7 +799,6 @@ function initApp() {
     `;
   }
 
-  // "덱 수정" 탭: 기존 덱을 선택했을 때 편집 폼 (저장 + 삭제 버튼 포함)
   function renderEditForm(deckName) {
     const d = guideDataCache[deckName];
     const detail = document.getElementById('editDetail');
@@ -822,7 +827,6 @@ function initApp() {
     document.getElementById('deleteDeckBtn').addEventListener('click', () => deleteDeck(deckName));
   }
 
-  // 기존 덱 수정 내용을 서버에 PUT 요청으로 저장
   async function saveDeck(deckName) {
     const btn = document.getElementById('saveDeckBtn');
     const status = document.getElementById('saveStatus');
@@ -867,7 +871,6 @@ function initApp() {
     }
   }
 
-  // 덱 삭제: 확인창을 거친 뒤 DELETE 요청, 성공하면 캐시와 목록에서도 제거
   async function deleteDeck(deckName) {
     if (!confirm(`'${deckName}' 덱을 정말 삭제하시겠습니까? 되돌릴 수 없습니다.`)) return;
 
@@ -892,11 +895,10 @@ function initApp() {
     }
   }
 
-  // "+ 새 덱 추가" 버튼: 빈 입력 폼을 오른쪽에 표시
   function renderNewDeckForm() {
     const detail = document.getElementById('editDetail');
     detail.innerHTML = `
-      <div class="detail-name">새 덱 추가</div>
+      <div class="detail-name">새 공격 덱 추가</div>
       <div class="edit-form">
         <label>덱 이름</label>
         <input type="text" id="f-new-name" placeholder="예: 여델칼" />
@@ -916,7 +918,6 @@ function initApp() {
     document.getElementById('createDeckBtn').addEventListener('click', createDeck);
   }
 
-  // 새 덱을 서버에 POST 요청으로 등록
   async function createDeck() {
     const status = document.getElementById('saveStatus');
     const deckName = document.getElementById('f-new-name').value.trim();
@@ -968,7 +969,205 @@ function initApp() {
 
   document.getElementById('newDeckBtn').addEventListener('click', renderNewDeckForm);
 
-  /* -------------------- 5. 정정 내역 (통합 이력: 덱 수정/추가/삭제, 메모, 레이드) -------------------- */
+
+  /* -------------------- 4-2. 방어 가이드 (단일 화면 통합) -------------------- */
+  
+  window.loadDefense = async function() {
+    if (!defenseDataCache) {
+      const res = await fetch('/defense');
+      const data = await res.json();
+      defenseDataCache = data.defense_data;
+    }
+    renderDefenseList();
+  };
+
+  function renderDefenseList() {
+    const listEl = document.getElementById('defenseListItems');
+    const keyword = (document.getElementById('defenseSearch').value || '').trim();
+    const normalizedKeyword = normalize(keyword);
+
+    const names = Object.keys(defenseDataCache).filter(n =>
+      n.includes(keyword) || (normalizedKeyword && normalize(n).includes(normalizedKeyword))
+    ).sort();
+
+    listEl.innerHTML = names.map(name =>
+      `<div class="deck-list-item" data-deck="${name}">${name}</div>`
+    ).join('') || '<div class="empty-state">일치하는 방어 덱이 없습니다.</div>';
+
+    listEl.querySelectorAll('.deck-list-item').forEach(item => {
+      item.addEventListener('click', () => {
+        listEl.querySelectorAll('.deck-list-item').forEach(i => i.classList.remove('selected'));
+        item.classList.add('selected');
+        renderDefenseForm(item.dataset.deck);
+      });
+    });
+  }
+
+  document.getElementById('defenseSearch').addEventListener('input', renderDefenseList);
+
+  function renderDefenseForm(deckName) {
+    const d = defenseDataCache[deckName];
+    const detail = document.getElementById('defenseDetail');
+    
+    // 카운터 조합 없이 우선순위, 장비, 메모만 표시
+    detail.innerHTML = `
+      <div class="detail-name">${deckName} <span style="font-size:13px; color:var(--text-dim); font-weight:normal;">(방어)</span></div>
+      <div class="edit-form">
+        <label>우선순위</label>
+        <textarea id="df-priority" rows="2">${d.priority_note || ''}</textarea>
+        <label>장비 세팅</label>
+        <textarea id="df-equipment" rows="2">${d.equipment || ''}</textarea>
+        <label>메모</label>
+        <textarea id="df-notes" rows="4">${d.notes || ''}</textarea>
+        <div class="btn-row">
+          <button class="save-btn" id="saveDefenseBtn">저장</button>
+          <button class="save-btn danger-save-btn" id="deleteDefenseBtn">삭제</button>
+        </div>
+        <div class="save-status" id="defSaveStatus"></div>
+      </div>
+    `;
+    document.getElementById('saveDefenseBtn').addEventListener('click', () => saveDefense(deckName));
+    document.getElementById('deleteDefenseBtn').addEventListener('click', () => deleteDefense(deckName));
+  }
+
+  async function saveDefense(deckName) {
+    const btn = document.getElementById('saveDefenseBtn');
+    const status = document.getElementById('defSaveStatus');
+    btn.disabled = true;
+    status.textContent = '';
+
+    const { username, password } = getAuth();
+    if (!username || !password) {
+      status.textContent = '로그인이 필요합니다.';
+      status.className = 'save-status err';
+      btn.disabled = false;
+      return;
+    }
+
+    const payload = {
+      priority_note: document.getElementById('df-priority').value,
+      equipment: document.getElementById('df-equipment').value,
+      notes: document.getElementById('df-notes').value,
+      username: username,
+      password: password,
+    };
+
+    try {
+      const res = await fetch('/defense/' + encodeURIComponent(deckName), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) {
+        if (res.status === 403) throw new Error('권한이 없습니다.');
+        throw new Error();
+      }
+      defenseDataCache[deckName] = payload;
+      status.textContent = '저장되었습니다.';
+      status.className = 'save-status ok';
+    } catch (e) {
+      status.textContent = e.message || '저장에 실패했습니다.';
+      status.className = 'save-status err';
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  async function deleteDefense(deckName) {
+    if (!confirm(`'${deckName}' 방어 배치를 정말 삭제하시겠습니까? 되돌릴 수 없습니다.`)) return;
+
+    const { username, password } = getAuth();
+    if (!username || !password) {
+      alert('로그인이 필요합니다.');
+      return;
+    }
+
+    try {
+      const res = await fetch('/defense/' + encodeURIComponent(deckName), {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+      if (!res.ok) throw new Error();
+      delete defenseDataCache[deckName];
+      renderDefenseList();
+      document.getElementById('defenseDetail').innerHTML = '<div class="detail-empty">위/왼쪽에서 덱을 선택하세요</div>';
+    } catch (e) {
+      alert('삭제에 실패했습니다.');
+    }
+  }
+
+  function renderNewDefenseForm() {
+    const detail = document.getElementById('defenseDetail');
+    detail.innerHTML = `
+      <div class="detail-name">새 방어 배치 추가</div>
+      <div class="edit-form">
+        <label>덱 이름</label>
+        <input type="text" id="df-new-name" placeholder="예: 루디/에반/..." />
+        <label>우선순위</label>
+        <textarea id="df-priority" rows="2"></textarea>
+        <label>장비 세팅</label>
+        <textarea id="df-equipment" rows="2"></textarea>
+        <label>메모</label>
+        <textarea id="df-notes" rows="4"></textarea>
+        <button class="save-btn" id="createDefenseBtn">추가</button>
+        <div class="save-status" id="defSaveStatus"></div>
+      </div>
+    `;
+    document.getElementById('createDefenseBtn').addEventListener('click', createDefense);
+  }
+
+  document.getElementById('newDefenseBtn').addEventListener('click', renderNewDefenseForm);
+
+  async function createDefense() {
+    const status = document.getElementById('defSaveStatus');
+    const deckName = document.getElementById('df-new-name').value.trim();
+    if (!deckName) {
+      status.textContent = '방어 덱 이름을 입력해주세요.';
+      status.className = 'save-status err';
+      return;
+    }
+
+    const { username, password } = getAuth();
+    if (!username || !password) {
+      status.textContent = '로그인이 필요합니다.';
+      status.className = 'save-status err';
+      return;
+    }
+
+    const payload = {
+      deck_name: deckName,
+      priority_note: document.getElementById('df-priority').value,
+      equipment: document.getElementById('df-equipment').value,
+      notes: document.getElementById('df-notes').value,
+      username: username,
+      password: password,
+    };
+
+    try {
+      const res = await fetch('/defense', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail);
+      defenseDataCache[deckName] = {
+        priority_note: payload.priority_note,
+        equipment: payload.equipment,
+        notes: payload.notes,
+      };
+      renderDefenseList();
+      status.textContent = '추가되었습니다.';
+      status.className = 'save-status ok';
+    } catch (e) {
+      status.textContent = e.message || '추가에 실패했습니다.';
+      status.className = 'save-status err';
+    }
+  }
+
+
+  /* -------------------- 5. 정정 내역 (통합 이력) -------------------- */
   window.loadCorrections = async function() {
     const list = document.getElementById('correctionsList');
     list.textContent = '불러오는 중...';
@@ -980,9 +1179,12 @@ function initApp() {
         return;
       }
       const typeLabels = {
-        deck: '덱 수정',
-        deck_create: '덱 추가',
-        deck_delete: '덱 삭제',
+        deck: '공격 가이드 수정',
+        deck_create: '공격 가이드 추가',
+        deck_delete: '공격 가이드 삭제',
+        defense: '방어 가이드 수정',
+        defense_create: '방어 가이드 추가',
+        defense_delete: '방어 가이드 삭제',
         memo: '메모',
         raid: '레이드',
       };
@@ -992,21 +1194,20 @@ function initApp() {
         const badge = `<span class="type-badge ${h.type}">${typeLabels[h.type] || h.type}</span>`;
         let detailLine = '';
 
-        if (h.type === 'deck') {
-          // 기존 덱 수정: 어떤 필드가 바뀌었는지 비교해서 표시
+        if (h.type === 'deck' || h.type === 'defense') {
           const changedFields = [];
           for (const key in fieldLabels) {
+            // defense 에는 counter_decks 가 없으므로 무시됨
             const beforeVal = JSON.stringify((h.before || {})[key] || (key === 'counter_decks' ? [] : ''));
             const afterVal = JSON.stringify((h.after || {})[key] || (key === 'counter_decks' ? [] : ''));
             if (beforeVal !== afterVal) changedFields.push(fieldLabels[key]);
           }
           detailLine = `변경된 항목: <span class="changed">${changedFields.join(', ') || '없음'}</span>`;
-        } else if (h.type === 'deck_create') {
-          detailLine = `<span class="changed">새 덱이 추가되었습니다.</span>`;
-        } else if (h.type === 'deck_delete') {
-          detailLine = `<span class="changed">덱이 삭제되었습니다.</span>`;
+        } else if (h.type === 'deck_create' || h.type === 'defense_create') {
+          detailLine = `<span class="changed">새 덱 배치가 추가되었습니다.</span>`;
+        } else if (h.type === 'deck_delete' || h.type === 'defense_delete') {
+          detailLine = `<span class="changed">덱 배치가 삭제되었습니다.</span>`;
         } else {
-          // 메모 / 레이드: 텍스트 저장이라 "내용이 변경됨"으로만 표시
           detailLine = `<span class="changed">내용이 저장되었습니다.</span>`;
         }
 
@@ -1064,7 +1265,6 @@ function initApp() {
 
   /* -------------------- 7. 레이드 공략 (강림 / 파괴신 / 돌발레이드) -------------------- */
 
-  // /raid 데이터를 최초 1회만 불러와서 캐싱
   async function loadRaidData() {
     if (!raidDataCache) {
       const res = await fetch('/raid');
@@ -1072,7 +1272,6 @@ function initApp() {
     }
   }
 
-  // "list" 타입 카테고리 (강림, 돌발레이드): 왼쪽 보스 목록 렌더링
   window.loadRaidList = async function(category) {
     await loadRaidData();
     const listEl = document.getElementById('raidList-' + category);
@@ -1091,7 +1290,6 @@ function initApp() {
     });
   };
 
-  // 보스 선택 시 오른쪽에 편집 가능한 텍스트영역 표시
   function renderRaidBossDetail(category, bossName) {
     const detail = document.getElementById('raidDetail-' + category);
     const content = raidDataCache[category].bosses[bossName] || '';
@@ -1135,7 +1333,6 @@ function initApp() {
     });
   }
 
-  // "single" 타입 카테고리 (파괴신): 목록 없이 바로 텍스트영역 표시
   window.loadRaidSingle = async function(category) {
     await loadRaidData();
     const textarea = document.getElementById('raidSingleTextarea-' + category);
@@ -1171,10 +1368,6 @@ function initApp() {
   });
 
   /* -------------------- 8. 사용자 관리 (admin 전용) -------------------- */
-
-  // 관리자 비밀번호 확인 -> 승인 대기 목록 + 전체 회원 목록을 함께 불러옴
-  // "사용자 관리" 탭 진입 시 자동으로 데이터 불러오기 (admin 계정만 이 탭이 보이므로 별도 비밀번호 불필요)
-  // "사용자 관리" 탭: 승인 대기 + 전체 회원만
   async function loadAdminData() {
     const { username, password } = getAuth();
     try {
@@ -1193,7 +1386,6 @@ function initApp() {
     }
   }
 
-  // "활동 로그" 탭: 활동 로그만 (계정 목록은 필터용으로 같이 불러옴)
   async function loadActivityLogData() {
     const { username, password } = getAuth();
     try {
@@ -1211,7 +1403,6 @@ function initApp() {
     }
   }
 
-  // 승인 대기 목록 렌더링: "승인" 버튼 누르면 /approve-user 호출
   function renderPendingUsers(usernames, adminUsername, adminPassword) {
     const listEl = document.getElementById('pendingList');
     if (!usernames.length) {
@@ -1247,7 +1438,6 @@ function initApp() {
     });
   }
 
-  // 전체 회원 목록 렌더링: 승인 상태 표시 + "삭제" 버튼 (admin 계정 본인은 삭제 버튼 숨김)
   function renderAllUsers(users, adminUsername, adminPassword) {
     document.getElementById('allUsersCount').textContent = `(총 ${users.length}명)`;
 
@@ -1282,7 +1472,7 @@ function initApp() {
           });
           if (!res.ok) throw new Error();
           btn.closest('.pending-item').remove();
-          loadAdminData(); // 인원수 갱신을 위해 데이터 다시 로드
+          loadAdminData(); 
         } catch (e) {
           btn.disabled = false;
           alert('삭제에 실패했습니다.');
@@ -1291,7 +1481,6 @@ function initApp() {
     });
   }
 
-  // 활동 로그 렌더링: 로그인/챗봇 질문/저장 작업 전부 표시, 계정별 드롭다운 필터 지원
   function renderActivityLog(logs, allUsers, adminUsername, adminPassword) {
     const filterEl = document.getElementById('logUserFilter');
     filterEl.innerHTML = '<option value="">전체 계정</option>' +
@@ -1327,7 +1516,7 @@ function initApp() {
 
   // ===== 공지사항 관리 (캡처 이미지 붙여넣기 기능 + 아코디언 형식 도입) =====
   
-  // 클립보드 이미지 붙여넣기(Ctrl+V) 이벤트 리스너 추가
+  // 클립보드 이미지 붙여넣기(Ctrl+V) 이벤트 리스너 추가[cite: 2]
   document.addEventListener('paste', (e) => {
     // 공지사항 글쓰기 박스가 열려있을 때만 동작
     const writeBox = document.getElementById('noticeWriteBox');
@@ -1337,14 +1526,14 @@ function initApp() {
         if (item.type.indexOf('image') !== -1) {
           const file = item.getAsFile();
           
-          // DataTransfer 객체를 사용해 input type="file"에 파일을 프로그램으로 세팅
+          // DataTransfer 객체를 사용해 input type="file"에 파일을 프로그램으로 세팅[cite: 2]
           const dataTransfer = new DataTransfer();
           dataTransfer.items.add(file);
           document.getElementById('noticeFileInput').files = dataTransfer.files;
           
-          // 이미지가 첨부되었다는 알림 텍스트 표시
+          // 이미지가 첨부되었다는 알림 텍스트 표시[cite: 2]
           document.getElementById('pasteIndicator').style.display = 'block';
-          break; // 첫 번째 이미지만 가져옴
+          break; // 첫 번째 이미지만 가져옴[cite: 2]
         }
       }
     }
@@ -1392,7 +1581,7 @@ function initApp() {
       return;
     }
 
-    // 아코디언 형식으로 렌더링하도록 구조 변경 (제목 클릭시 내용 오픈)
+    // 아코디언 형식으로 렌더링하도록 구조 변경 (제목 클릭시 내용 오픈)[cite: 2]
     listEl.innerHTML = notices.map(n => {
       let fileHTML = '';
       if (n.file_url) {

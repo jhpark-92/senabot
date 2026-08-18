@@ -3,7 +3,7 @@
 
 주요 기능:
 1. 정적 파일(index.html) 제공
-2. 가이드 데이터 조회 / 수정 / 추가 / 삭제
+2. 가이드 데이터 조회 / 수정 / 추가 / 삭제 (공격 가이드 / 방어 가이드)
 3. 챗봇 대화 (Gemini + MCP 연동은 chat_logic.py에서 처리)
 4. 회원가입 / 로그인 / 관리자 승인
 5. 관리자용 회원 관리 (전체 조회, 삭제)
@@ -72,6 +72,7 @@ def ensure_data_files():
     
     defaults = {
         "guide_data.json": {},
+        "defense_data.json": {},  # 방어 가이드 데이터 추가
         "history.json": [],
         "users.json": {},
         "memo.json": {"content": ""},
@@ -182,16 +183,23 @@ def check_admin_login(username: str, password: str):
         raise HTTPException(status_code=403, detail="관리자 권한이 없습니다.")
 
 # =========================================================
-# 가이드 데이터 (guide_data.json) — 덱별 카운터 조합 정보
+# 데이터 로드/저장 유틸 (가이드 데이터, 방어 데이터)
 # =========================================================
 
 def load_guide_data():
     with open(path("guide_data.json"), "r", encoding="utf-8") as f:
         return json.load(f)
 
-
 def save_guide_data(data):
     with open(path("guide_data.json"), "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+def load_defense_data():
+    with open(path("defense_data.json"), "r", encoding="utf-8") as f:
+        return json.load(f)
+
+def save_defense_data(data):
+    with open(path("defense_data.json"), "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
 
 
@@ -200,16 +208,6 @@ def save_guide_data(data):
 #
 # 덱 수정 / 덱 추가 / 덱 삭제 / 메모 저장 / 레이드 저장 등
 # "실제 데이터가 바뀐" 저장 동작만 기록한다. (활동 전체 로그는 activity_log.json 참고)
-#
-# 각 기록의 형태:
-# {
-#   "type": "deck" | "deck_create" | "deck_delete" | "memo" | "raid",
-#   "target": "표시용 이름 (예: '겔아클', '메모장', '강림 - 태오')",
-#   "username": "수정한 사람 아이디",
-#   "timestamp": "YYYY-MM-DD HH:MM (KST)",
-#   "before": 수정 전 내용 (신규 추가면 null),
-#   "after": 수정 후 내용 (삭제면 null),
-# }
 # =========================================================
 
 def load_history():
@@ -219,11 +217,9 @@ def load_history():
     except FileNotFoundError:
         return []
 
-
 def save_history(history):
     with open(path("history.json"), "w", encoding="utf-8") as f:
         json.dump(history, f, ensure_ascii=False, indent=2)
-
 
 def add_history_entry(entry_type: str, target: str, username: str, before, after):
     """모든 저장 동작(덱 수정/추가/삭제, 메모, 레이드)에서 공통으로 호출하는 이력 기록 함수"""
@@ -238,20 +234,15 @@ def add_history_entry(entry_type: str, target: str, username: str, before, after
     })
     save_history(history)
 
-
 # =========================================================
 # 활동 로그 (activity_log.json) — "사용자 관리" 탭에서 admin이 조회
 #
 # 로그인 / 챗봇 질문 / 저장 작업(덱·메모·레이드) 등 "누가 언제 무엇을 했는지"를
 # history.json보다 더 넓은 범위로 기록한다 (로그인, 챗봇 질문까지 포함).
 # 60일이 지난 로그는 새 로그가 추가될 때마다 자동으로 정리된다.
-#
-# 각 기록의 형태:
-# {"type": "login" | "chat" | "save", "username": "...", "timestamp": "...", "detail": "..."}
 # =========================================================
 
 LOG_RETENTION_DAYS = 60
-
 
 def load_activity_log():
     try:
@@ -260,11 +251,9 @@ def load_activity_log():
     except FileNotFoundError:
         return []
 
-
 def save_activity_log(logs):
     with open(path("activity_log.json"), "w", encoding="utf-8") as f:
         json.dump(logs, f, ensure_ascii=False, indent=2)
-
 
 def cleanup_old_logs(logs, days: int = LOG_RETENTION_DAYS):
     """timestamp가 days일보다 오래된 로그를 제거. 형식이 깨진 로그는 안전하게 유지."""
@@ -279,7 +268,6 @@ def cleanup_old_logs(logs, days: int = LOG_RETENTION_DAYS):
             kept.append(log)
     return kept
 
-
 def add_activity_log(log_type: str, username: str, detail: str = ""):
     """로그인/챗봇 질문/저장 작업 등 모든 활동을 기록. 기록할 때마다 60일 지난 로그를 함께 정리."""
     logs = load_activity_log()
@@ -292,25 +280,17 @@ def add_activity_log(log_type: str, username: str, detail: str = ""):
     logs = cleanup_old_logs(logs)
     save_activity_log(logs)
 
-
 # =========================================================
-# 회원 정보 (users.json)
-# 구조: { "아이디": {"hashed": ..., "salt": ..., "approved": true/false} }
+# 회원 정보, 공유 메모장, 레이드 공략 로드/저장
 # =========================================================
 
 def load_users():
     with open(path("users.json"), "r", encoding="utf-8") as f:
         return json.load(f)
 
-
 def save_users(users):
     with open(path("users.json"), "w", encoding="utf-8") as f:
         json.dump(users, f, ensure_ascii=False, indent=2)
-
-
-# =========================================================
-# 공유 메모장 (memo.json) — 관리자가 수정할 내용을 임시로 적어두는 공간
-# =========================================================
 
 def load_memo():
     try:
@@ -318,7 +298,6 @@ def load_memo():
             return json.load(f)
     except FileNotFoundError:
         return {"content": ""}
-
 
 def save_memo(data):
     with open(path("memo.json"), "w", encoding="utf-8") as f:
@@ -342,7 +321,6 @@ def load_raid_data():
     with open(path("raid_data.json"), "r", encoding="utf-8") as f:
         return json.load(f)
 
-
 def save_raid_data(data):
     with open(path("raid_data.json"), "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
@@ -356,7 +334,7 @@ class ChatRequest(BaseModel):
     message: str
     username: str = ""  # 활동 로그에 "누가 물어봤는지" 기록하기 위해 사용 (없어도 동작은 함)
 
-
+# ---- 공격 덱 ----
 class DeckUpdate(BaseModel):
     """기존 덱 하나를 통째로 수정할 때 사용"""
     counter_decks: list[str]
@@ -365,7 +343,6 @@ class DeckUpdate(BaseModel):
     notes: str = ""
     username: str
     password: str
-
 
 class DeckCreate(BaseModel):
     """새 덱을 처음부터 등록할 때 사용 (덱 이름을 body에 포함)"""
@@ -377,40 +354,50 @@ class DeckCreate(BaseModel):
     username: str
     password: str
 
-
 class DeckDelete(BaseModel):
     """덱 삭제 시 인증 정보만 필요 (덱 이름은 URL 경로에 포함)"""
     username: str
     password: str
 
+# ---- 방어 덱 (카운터 조합 없음) ----
+class DefenseUpdate(BaseModel):
+    priority_note: str = ""
+    equipment: str = ""
+    notes: str = ""
+    username: str
+    password: str
 
+class DefenseCreate(BaseModel):
+    deck_name: str
+    priority_note: str = ""
+    equipment: str = ""
+    notes: str = ""
+    username: str
+    password: str
+
+# ---- 기타 공통 ----
 class SignupRequest(BaseModel):
     username: str
     password: str
 
-
 class LoginRequest(BaseModel):
     username: str
     password: str
-
 
 class ApproveRequest(BaseModel):
     username: str
     password: str
     admin_username: str
 
-
 class RevokeRequest(BaseModel):
     username: str
     password: str
     admin_username: str
 
-
 class MemoUpdate(BaseModel):
     content: str
     username: str
     password: str
-
 
 class RaidUpdate(BaseModel):
     boss: str | None = None   # "list" 타입 카테고리일 때만 사용 (예: "태오")
@@ -428,30 +415,23 @@ def read_index():
     """루트 접속 시 프론트엔드(index.html) 반환"""
     return FileResponse("static/index.html")
 
-
 app.mount("/static", StaticFiles(directory="static"), name="static")
-app.mount("/uploads", StaticFiles(directory=path("uploads")), name="uploads") # 파일 업로드 디렉토리 마운트
+app.mount("/uploads", StaticFiles(directory=path("uploads")), name="uploads")
 
 
 # =========================================================
-# 가이드 조회 / 수정 / 추가 / 삭제
+# 공격 가이드 조회 / 수정 / 추가 / 삭제
 # =========================================================
 
 @app.get("/guide")
 def get_guide():
-    """전체 가이드 데이터(덱별 카운터 정보)를 반환. 인증 불필요 (조회는 누구나 가능)."""
-    guide_data = load_guide_data()
-    return {"guide_data": guide_data}
-
+    """전체 공격 가이드 데이터를 반환. 인증 불필요 (조회는 누구나 가능)."""
+    return {"guide_data": load_guide_data()}
 
 @app.put("/guide/{deck_name}")
 def update_deck(deck_name: str, update: DeckUpdate):
-    """
-    기존 덱 하나의 정보를 통째로 덮어씀.
-    수정 전/후 내용을 통합 이력(history.json)과 활동 로그에 각각 기록.
-    """
+    """기존 공격 덱 하나의 정보를 통째로 덮어씀."""
     check_login(update.username, update.password)
-
     guide_data = load_guide_data()
     before = guide_data.get(deck_name, {})
 
@@ -465,19 +445,13 @@ def update_deck(deck_name: str, update: DeckUpdate):
     save_guide_data(guide_data)
 
     add_history_entry("deck", deck_name, update.username, before, after)
-    add_activity_log("save", update.username, f"덱 수정: {deck_name}")
-
+    add_activity_log("save", update.username, f"공격 덱 수정: {deck_name}")
     return {"message": f"{deck_name} 정보가 수정되었습니다."}
-
 
 @app.post("/guide")
 def create_deck(body: DeckCreate):
-    """
-    완전히 새로운 덱을 목록에 처음 등록.
-    이미 같은 이름의 덱이 있으면 400 에러 (실수로 덮어쓰는 것 방지 — 수정은 PUT을 써야 함).
-    """
+    """완전히 새로운 공격 덱을 목록에 처음 등록."""
     check_login(body.username, body.password)
-
     guide_data = load_guide_data()
     if body.deck_name in guide_data:
         raise HTTPException(status_code=400, detail="이미 존재하는 덱 이름입니다.")
@@ -491,22 +465,14 @@ def create_deck(body: DeckCreate):
     guide_data[body.deck_name] = after
     save_guide_data(guide_data)
 
-    # 신규 추가라 "이전 상태"가 없으므로 before는 None
     add_history_entry("deck_create", body.deck_name, body.username, None, after)
-    add_activity_log("save", body.username, f"덱 추가: {body.deck_name}")
-
+    add_activity_log("save", body.username, f"공격 덱 추가: {body.deck_name}")
     return {"message": f"{body.deck_name} 덱이 추가되었습니다."}
-
 
 @app.delete("/guide/{deck_name}")
 def delete_deck(deck_name: str, body: DeckDelete):
-    """
-    덱을 완전히 삭제.
-    삭제 전 내용을 이력에 남겨두므로("deck_delete"), 나중에 "정정 내역"에서
-    무엇이 삭제됐는지 확인은 가능하지만 자동 복구 기능은 없다.
-    """
+    """공격 덱을 완전히 삭제."""
     check_login(body.username, body.password)
-
     guide_data = load_guide_data()
     if deck_name not in guide_data:
         raise HTTPException(status_code=404, detail="존재하지 않는 덱입니다.")
@@ -515,45 +481,98 @@ def delete_deck(deck_name: str, body: DeckDelete):
     del guide_data[deck_name]
     save_guide_data(guide_data)
 
-    # 삭제라 "이후 상태"가 없으므로 after는 None
     add_history_entry("deck_delete", deck_name, body.username, before, None)
-    add_activity_log("save", body.username, f"덱 삭제: {deck_name}")
-
+    add_activity_log("save", body.username, f"공격 덱 삭제: {deck_name}")
     return {"message": f"{deck_name} 덱이 삭제되었습니다."}
 
 
 # =========================================================
-# 통합 수정 이력 조회 ("정정 내역" 탭)
+# 방어 가이드 조회 / 수정 / 추가 / 삭제
+# =========================================================
+
+@app.get("/defense")
+def get_defense():
+    """방어 가이드 데이터를 반환."""
+    return {"defense_data": load_defense_data()}
+
+@app.put("/defense/{deck_name}")
+def update_defense(deck_name: str, update: DefenseUpdate):
+    """방어 덱 하나를 통째로 덮어씀."""
+    check_login(update.username, update.password)
+    defense_data = load_defense_data()
+    before = defense_data.get(deck_name, {})
+
+    after = {
+        "priority_note": update.priority_note,
+        "equipment": update.equipment,
+        "notes": update.notes,
+    }
+    defense_data[deck_name] = after
+    save_defense_data(defense_data)
+
+    add_history_entry("defense", deck_name, update.username, before, after)
+    add_activity_log("save", update.username, f"방어 덱 수정: {deck_name}")
+    return {"message": f"{deck_name} 방어 배치가 수정되었습니다."}
+
+@app.post("/defense")
+def create_defense(body: DefenseCreate):
+    """새로운 방어 덱 등록."""
+    check_login(body.username, body.password)
+    defense_data = load_defense_data()
+    if body.deck_name in defense_data:
+        raise HTTPException(status_code=400, detail="이미 존재하는 방어 덱 이름입니다.")
+
+    after = {
+        "priority_note": body.priority_note,
+        "equipment": body.equipment,
+        "notes": body.notes,
+    }
+    defense_data[body.deck_name] = after
+    save_defense_data(defense_data)
+
+    add_history_entry("defense_create", body.deck_name, body.username, None, after)
+    add_activity_log("save", body.username, f"방어 덱 추가: {body.deck_name}")
+    return {"message": f"{body.deck_name} 방어 배치가 추가되었습니다."}
+
+@app.delete("/defense/{deck_name}")
+def delete_defense(deck_name: str, body: DeckDelete):
+    """방어 덱 완전 삭제."""
+    check_login(body.username, body.password)
+    defense_data = load_defense_data()
+    if deck_name not in defense_data:
+        raise HTTPException(status_code=404, detail="존재하지 않는 덱입니다.")
+
+    before = defense_data[deck_name]
+    del defense_data[deck_name]
+    save_defense_data(defense_data)
+
+    add_history_entry("defense_delete", deck_name, body.username, before, None)
+    add_activity_log("save", body.username, f"방어 덱 삭제: {deck_name}")
+    return {"message": f"{deck_name} 방어 배치가 삭제되었습니다."}
+
+
+# =========================================================
+# 통합 수정 이력, 공유 메모장, 레이드
 # =========================================================
 
 @app.get("/corrections")
 def get_corrections_list():
-    """모든 저장 동작(덱 수정/추가/삭제, 메모, 레이드)의 이력을 최신순으로 반환"""
-    history = load_history()
-    return list(reversed(history))
-
-
-# =========================================================
-# 공유 메모장
-# =========================================================
+    """모든 저장 동작의 이력을 최신순으로 반환"""
+    return list(reversed(load_history()))
 
 @app.get("/memo")
 def get_memo():
     return load_memo()
 
-
 @app.put("/memo")
 def update_memo(body: MemoUpdate):
     """메모장 내용 저장. 저장할 때마다 이력/활동 로그에도 기록."""
     check_login(body.username, body.password)
-
     before = load_memo()
     after = {"content": body.content}
     save_memo(after)
-
     add_history_entry("memo", "메모장", body.username, before.get("content", ""), body.content)
     add_activity_log("save", body.username, "메모 저장")
-
     return {"message": "메모가 저장되었습니다."}
 
 
@@ -566,14 +585,9 @@ def get_raid_data():
     """레이드 공략 데이터 전체 반환 (강림/파괴신/돌발레이드)"""
     return load_raid_data()
 
-
 @app.put("/raid/{category}")
 def update_raid(category: str, update: RaidUpdate):
-    """
-    특정 카테고리(강림/파괴신/돌발레이드)의 공략 내용을 수정.
-    카테고리 type이 "list"면 update.boss로 어떤 보스인지 지정해야 하고,
-    "single"이면 boss 없이 content만 전체 교체한다.
-    """
+    """특정 카테고리(강림/파괴신/돌발레이드)의 공략 내용을 수정."""
     check_login(update.username, update.password)
     raid_data = load_raid_data()
 
@@ -599,7 +613,6 @@ def update_raid(category: str, update: RaidUpdate):
 
     add_history_entry("raid", target_label, update.username, before, after)
     add_activity_log("save", update.username, f"레이드 저장: {target_label}")
-
     return {"message": "저장되었습니다."}
 
 
@@ -625,10 +638,7 @@ async def chat_endpoint(req: ChatRequest):
 
 @app.post("/signup")
 def signup(body: SignupRequest):
-    """
-    새 계정 가입 신청. 비밀번호는 해시로 저장하고, approved=False(승인 대기) 상태로 등록.
-    관리자가 승인해야 실제 로그인이 가능해짐.
-    """
+    """새 계정 가입 신청. 비밀번호는 해시로 저장하고, approved=False(승인 대기) 상태로 등록."""
     users = load_users()
     if body.username in users:
         raise HTTPException(status_code=400, detail="이미 존재하는 아이디입니다.")
@@ -639,7 +649,6 @@ def signup(body: SignupRequest):
     save_users(users)
     return {"message": "가입 신청이 완료되었습니다. 관리자 승인 후 로그인 가능합니다."}
 
-
 @app.post("/login")
 def login(body: LoginRequest):
     """아이디+비밀번호 확인 후, 승인된 계정만 로그인 허용. 로그인 성공 시 활동 로그에 기록."""
@@ -649,9 +658,7 @@ def login(body: LoginRequest):
         raise HTTPException(status_code=403, detail="아이디 또는 비밀번호가 올바르지 않습니다.")
     if not user.get("approved"):
         raise HTTPException(status_code=403, detail="아직 관리자 승인 대기 중입니다.")
-
     add_activity_log("login", body.username)
-
     return {"ok": True}
 
 
@@ -667,7 +674,6 @@ def pending_users(username: str, password: str):
     users = load_users()
     return [u for u, v in users.items() if not v.get("approved")]
 
-
 @app.post("/approve-user")
 def approve_user(body: ApproveRequest):
     """대기 중인 사용자를 승인 상태로 전환"""
@@ -679,14 +685,12 @@ def approve_user(body: ApproveRequest):
     save_users(users)
     return {"message": f"{body.username} 승인 완료"}
 
-
 @app.get("/all-users")
 def all_users(username: str, password: str):
     """전체 회원 목록(아이디 + 승인 상태)을 반환"""
     check_admin_login(username, password)
     users = load_users()
     return [{"username": u, "approved": v.get("approved", False)} for u, v in users.items()]
-
 
 @app.post("/revoke-user")
 def revoke_user(body: RevokeRequest):
@@ -700,7 +704,6 @@ def revoke_user(body: RevokeRequest):
     del users[body.username]
     save_users(users)
     return {"message": f"{body.username} 계정이 삭제되었습니다."}
-
 
 @app.get("/activity-log")
 def get_activity_log(username: str, password: str, username_filter: str = ""):
@@ -723,23 +726,19 @@ def load_notices():
     except FileNotFoundError:
         return []
 
-
 def save_notices(notices):
     with open(path("notices.json"), "w", encoding="utf-8") as f:
         json.dump(notices, f, ensure_ascii=False, indent=2)
 
-
 class NoticeDelete(BaseModel):
     username: str
     password: str
-
 
 @app.get("/notices")
 def get_notices():
     """공지사항 목록을 최신순으로 반환. 인증 불필요 (누구나 조회 가능)."""
     notices = load_notices()
     return list(reversed(notices))
-
 
 @app.post("/notices")
 async def create_notice(
@@ -774,17 +773,13 @@ async def create_notice(
     save_notices(notices)
 
     add_activity_log("save", username, f"공지 등록: {title}")
-
     return {"message": "공지사항이 등록되었습니다."}
-
 
 @app.delete("/notices/{notice_id}")
 def delete_notice(notice_id: int, body: NoticeDelete):
     """공지사항 삭제. admin만 가능."""
     check_admin_login(body.username, body.password)
-
     notices = load_notices()
     notices = [n for n in notices if n["id"] != notice_id]
     save_notices(notices)
-
     return {"message": "공지사항이 삭제되었습니다."}
