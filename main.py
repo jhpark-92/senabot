@@ -3,13 +3,13 @@
 
 주요 기능:
 1. 정적 파일(index.html) 제공
-2. 가이드 데이터 조회/수정
+2. 가이드 데이터 조회 / 수정 / 추가 / 삭제
 3. 챗봇 대화 (Gemini + MCP 연동은 chat_logic.py에서 처리)
 4. 회원가입 / 로그인 / 관리자 승인
 5. 관리자용 회원 관리 (전체 조회, 삭제)
 6. 공유 메모장
 7. 레이드 공략 (강림 / 파괴신 / 돌발레이드)
-8. 통합 수정 이력 ("정정 내역" 탭) — 덱 수정/메모/레이드 저장을 전부 기록
+8. 통합 수정 이력 ("정정 내역" 탭) — 덱 수정/추가/삭제, 메모, 레이드 저장을 전부 기록
 9. Railway Volume(영구 저장소) 대응
 """
 
@@ -34,7 +34,7 @@ KST = ZoneInfo("Asia/Seoul")
 
 
 def now_kst() -> str:
-    """한국 시간(KST) 기준 현재 시각 문자열"""
+    """한국 시간(KST) 기준 현재 시각 문자열. Railway 서버는 기본 UTC라 명시적으로 변환해야 함."""
     return datetime.now(KST).strftime("%Y-%m-%d %H:%M")
 
 
@@ -47,7 +47,8 @@ def now_kst() -> str:
 #
 # 주의: Volume 연결 이후에는 git push로 데이터 파일(guide_data.json 등)을
 #       바꿔도 서비스에 자동 반영되지 않는다 (ensure_data_files가 최초 1회만
-#       복사하기 때문). 데이터 갱신은 API(PUT 엔드포인트)를 통해 반영해야 함.
+#       복사하기 때문). 데이터 갱신은 반드시 API(POST/PUT/DELETE 엔드포인트)를
+#       통해 반영해야 한다.
 # =========================================================
 
 DATA_DIR = os.environ.get("DATA_DIR", ".")
@@ -104,7 +105,7 @@ ensure_data_files()
 # 비밀번호 / 로그인 관련 유틸리티
 # =========================================================
 
-# 회원 승인/관리 기능에 쓰이는 "관리자 비밀번호"
+# 회원 승인/관리 기능에 쓰이는 "관리자 비밀번호" (일반 로그인 비밀번호와는 별개)
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "changeme_admin")
 
 
@@ -128,7 +129,8 @@ def verify_password_hash(password: str, salt: str, hashed: str) -> bool:
 def check_login(username: str, password: str):
     """
     아이디+비밀번호가 실제 승인된 회원 계정인지 확인.
-    덱 수정, 메모 저장, 레이드 저장 등 "로그인한 회원이면 누구나 가능한" 작업에 사용.
+    덱 수정/추가/삭제, 메모 저장, 레이드 저장 등
+    "로그인한 회원이면 누구나 가능한" 작업에 공통으로 사용.
     """
     users = load_users()
     user = users.get(username)
@@ -155,15 +157,17 @@ def save_guide_data(data):
 # =========================================================
 # 통합 수정 이력 (history.json) — "정정 내역" 탭에 표시됨
 #
-# 덱 수정 / 메모 저장 / 레이드 저장 등 모든 저장 동작을 한 곳에 기록한다.
-# 각 기록은 다음 형태:
+# 덱 수정 / 덱 추가 / 덱 삭제 / 메모 저장 / 레이드 저장 등
+# 모든 저장 동작을 한 곳에 기록한다.
+#
+# 각 기록의 형태:
 # {
-#   "type": "deck" | "memo" | "raid",
+#   "type": "deck" | "deck_create" | "deck_delete" | "memo" | "raid",
 #   "target": "표시용 이름 (예: '겔아클', '메모장', '강림 - 태오')",
 #   "username": "수정한 사람 아이디",
 #   "timestamp": "YYYY-MM-DD HH:MM (KST)",
-#   "before": {...} 또는 "...",   # 수정 전 내용
-#   "after": {...} 또는 "...",    # 수정 후 내용
+#   "before": 수정 전 내용 (신규 추가면 null),
+#   "after": 수정 후 내용 (삭제면 null),
 # }
 # =========================================================
 
@@ -181,7 +185,7 @@ def save_history(history):
 
 
 def add_history_entry(entry_type: str, target: str, username: str, before, after):
-    """모든 저장 동작(덱/메모/레이드)에서 공통으로 호출하는 이력 기록 함수"""
+    """모든 저장 동작(덱 수정/추가/삭제, 메모, 레이드)에서 공통으로 호출하는 이력 기록 함수"""
     history = load_history()
     history.append({
         "type": entry_type,
@@ -258,10 +262,28 @@ class ChatRequest(BaseModel):
 
 
 class DeckUpdate(BaseModel):
+    """기존 덱 하나를 통째로 수정할 때 사용"""
     counter_decks: list[str]
     priority_note: str = ""
     equipment: str = ""
     notes: str = ""
+    username: str
+    password: str
+
+
+class DeckCreate(BaseModel):
+    """새 덱을 처음부터 등록할 때 사용 (덱 이름을 body에 포함)"""
+    deck_name: str
+    counter_decks: list[str] = []
+    priority_note: str = ""
+    equipment: str = ""
+    notes: str = ""
+    username: str
+    password: str
+
+
+class DeckDelete(BaseModel):
+    """덱 삭제 시 인증 정보만 필요 (덱 이름은 URL 경로에 포함)"""
     username: str
     password: str
 
@@ -313,7 +335,7 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
 # =========================================================
-# 가이드 조회 / 수정
+# 가이드 조회 / 수정 / 추가 / 삭제
 # =========================================================
 
 @app.get("/guide")
@@ -326,8 +348,8 @@ def get_guide():
 @app.put("/guide/{deck_name}")
 def update_deck(deck_name: str, update: DeckUpdate):
     """
-    특정 덱 하나의 정보를 통째로 덮어씀.
-    수정 전/후 내용을 통합 이력(history.json)에 기록.
+    기존 덱 하나의 정보를 통째로 덮어씀.
+    수정 전/후 내용을 통합 이력(history.json)에 "deck" 타입으로 기록.
     """
     check_login(update.username, update.password)
 
@@ -348,13 +370,63 @@ def update_deck(deck_name: str, update: DeckUpdate):
     return {"message": f"{deck_name} 정보가 수정되었습니다."}
 
 
+@app.post("/guide")
+def create_deck(body: DeckCreate):
+    """
+    완전히 새로운 덱을 목록에 처음 등록.
+    이미 같은 이름의 덱이 있으면 400 에러 (실수로 덮어쓰는 것 방지 — 수정은 PUT을 써야 함).
+    """
+    check_login(body.username, body.password)
+
+    guide_data = load_guide_data()
+    if body.deck_name in guide_data:
+        raise HTTPException(status_code=400, detail="이미 존재하는 덱 이름입니다.")
+
+    after = {
+        "counter_decks": body.counter_decks,
+        "priority_note": body.priority_note,
+        "equipment": body.equipment,
+        "notes": body.notes,
+    }
+    guide_data[body.deck_name] = after
+    save_guide_data(guide_data)
+
+    # 신규 추가라 "이전 상태"가 없으므로 before는 None
+    add_history_entry("deck_create", body.deck_name, body.username, None, after)
+
+    return {"message": f"{body.deck_name} 덱이 추가되었습니다."}
+
+
+@app.delete("/guide/{deck_name}")
+def delete_deck(deck_name: str, body: DeckDelete):
+    """
+    덱을 완전히 삭제.
+    삭제 전 내용을 이력에 남겨두므로("deck_delete"), 나중에 "정정 내역"에서
+    무엇이 삭제됐는지 확인은 가능하지만 자동 복구 기능은 없다.
+    """
+    check_login(body.username, body.password)
+
+    guide_data = load_guide_data()
+    if deck_name not in guide_data:
+        raise HTTPException(status_code=404, detail="존재하지 않는 덱입니다.")
+
+    before = guide_data[deck_name]
+    del guide_data[deck_name]
+    save_guide_data(guide_data)
+
+    # 삭제라 "이후 상태"가 없으므로 after는 None
+    add_history_entry("deck_delete", deck_name, body.username, before, None)
+
+    return {"message": f"{deck_name} 덱이 삭제되었습니다."}
+
+
 # =========================================================
 # 통합 수정 이력 조회 ("정정 내역" 탭)
 # =========================================================
 
 @app.get("/corrections")
 def get_corrections_list():
-    """모든 저장 동작(덱/메모/레이드)의 이력을 최신순으로 반환"""
+    """모든 저장 동작(덱 수정/추가/삭제, 메모, 레이드)의 이력을 최신순으로 반환"""
     history = load_history()
     return list(reversed(history))
 
@@ -370,6 +442,7 @@ def get_memo():
 
 @app.put("/memo")
 def update_memo(body: MemoUpdate):
+    """메모장 내용 저장. 저장할 때마다 이력에도 기록."""
     check_login(body.username, body.password)
 
     before = load_memo()
