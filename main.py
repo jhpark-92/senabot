@@ -393,13 +393,13 @@ class LoginRequest(BaseModel):
 class ApproveRequest(BaseModel):
     username: str
     password: str
-    admin_password: str
+    admin_username: str
 
 
 class RevokeRequest(BaseModel):
     username: str
     password: str
-    admin_password: str
+    admin_username: str
 
 
 class MemoUpdate(BaseModel):
