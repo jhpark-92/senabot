@@ -3,13 +3,14 @@
 
 주요 기능:
 1. 정적 파일(index.html) 제공
-2. 가이드 데이터 조회/수정 + 수정 이력 기록
+2. 가이드 데이터 조회/수정
 3. 챗봇 대화 (Gemini + MCP 연동은 chat_logic.py에서 처리)
 4. 회원가입 / 로그인 / 관리자 승인
 5. 관리자용 회원 관리 (전체 조회, 삭제)
 6. 공유 메모장
 7. 레이드 공략 (강림 / 파괴신 / 돌발레이드)
-8. Railway Volume(영구 저장소) 대응
+8. 통합 수정 이력 ("정정 내역" 탭) — 덱 수정/메모/레이드 저장을 전부 기록
+9. Railway Volume(영구 저장소) 대응
 """
 
 import os
@@ -29,6 +30,13 @@ from chat_logic import ask
 
 app = FastAPI()
 
+KST = ZoneInfo("Asia/Seoul")
+
+
+def now_kst() -> str:
+    """한국 시간(KST) 기준 현재 시각 문자열"""
+    return datetime.now(KST).strftime("%Y-%m-%d %H:%M")
+
 
 # =========================================================
 # 영구 저장 경로 설정 (Railway Volume 대응)
@@ -36,6 +44,10 @@ app = FastAPI()
 # 로컬 개발 환경: DATA_DIR 환경변수가 없으므로 현재 폴더(".")를 그대로 사용
 # 배포 환경(Railway): DATA_DIR=/data 로 설정해서, 재배포해도 안 사라지는
 #                      Volume 경로에 사용자 데이터를 저장
+#
+# 주의: Volume 연결 이후에는 git push로 데이터 파일(guide_data.json 등)을
+#       바꿔도 서비스에 자동 반영되지 않는다 (ensure_data_files가 최초 1회만
+#       복사하기 때문). 데이터 갱신은 API(PUT 엔드포인트)를 통해 반영해야 함.
 # =========================================================
 
 DATA_DIR = os.environ.get("DATA_DIR", ".")
@@ -55,7 +67,7 @@ def ensure_data_files():
     os.makedirs(DATA_DIR, exist_ok=True)
     defaults = {
         "guide_data.json": {},
-        "deck_history.json": [],
+        "history.json": [],
         "users.json": {},
         "memo.json": {"content": ""},
         "raid_data.json": {
@@ -89,23 +101,11 @@ ensure_data_files()
 
 
 # =========================================================
-# 비밀번호 관련 유틸리티
+# 비밀번호 / 로그인 관련 유틸리티
 # =========================================================
 
 # 회원 승인/관리 기능에 쓰이는 "관리자 비밀번호"
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "changeme_admin")
-
-def check_login(username: str, password: str):
-    """
-    아이디+비밀번호가 실제 승인된 회원 계정인지 확인.
-    덱 수정, 메모 저장 등 "로그인한 회원이면 누구나 가능한" 작업에 사용.
-    """
-    users = load_users()
-    user = users.get(username)
-    if not user or not verify_password_hash(password, user["salt"], user["hashed"]):
-        raise HTTPException(status_code=403, detail="로그인 정보가 올바르지 않습니다.")
-    if not user.get("approved"):
-        raise HTTPException(status_code=403, detail="승인되지 않은 계정입니다.")
 
 
 def hash_password(password: str, salt: str = None):
@@ -125,6 +125,19 @@ def verify_password_hash(password: str, salt: str, hashed: str) -> bool:
     return check == hashed
 
 
+def check_login(username: str, password: str):
+    """
+    아이디+비밀번호가 실제 승인된 회원 계정인지 확인.
+    덱 수정, 메모 저장, 레이드 저장 등 "로그인한 회원이면 누구나 가능한" 작업에 사용.
+    """
+    users = load_users()
+    user = users.get(username)
+    if not user or not verify_password_hash(password, user["salt"], user["hashed"]):
+        raise HTTPException(status_code=403, detail="로그인 정보가 올바르지 않습니다.")
+    if not user.get("approved"):
+        raise HTTPException(status_code=403, detail="승인되지 않은 계정입니다.")
+
+
 # =========================================================
 # 가이드 데이터 (guide_data.json) — 덱별 카운터 조합 정보
 # =========================================================
@@ -140,21 +153,45 @@ def save_guide_data(data):
 
 
 # =========================================================
-# 덱 수정 이력 (deck_history.json) — "정정 내역" 탭에 표시됨
-# 챗봇 대화 중 정정이 아니라, "덱 수정" 탭에서 직접 편집한 기록만 남김
+# 통합 수정 이력 (history.json) — "정정 내역" 탭에 표시됨
+#
+# 덱 수정 / 메모 저장 / 레이드 저장 등 모든 저장 동작을 한 곳에 기록한다.
+# 각 기록은 다음 형태:
+# {
+#   "type": "deck" | "memo" | "raid",
+#   "target": "표시용 이름 (예: '겔아클', '메모장', '강림 - 태오')",
+#   "username": "수정한 사람 아이디",
+#   "timestamp": "YYYY-MM-DD HH:MM (KST)",
+#   "before": {...} 또는 "...",   # 수정 전 내용
+#   "after": {...} 또는 "...",    # 수정 후 내용
+# }
 # =========================================================
 
-def load_deck_history():
+def load_history():
     try:
-        with open(path("deck_history.json"), "r", encoding="utf-8") as f:
+        with open(path("history.json"), "r", encoding="utf-8") as f:
             return json.load(f)
     except FileNotFoundError:
         return []
 
 
-def save_deck_history(history):
-    with open(path("deck_history.json"), "w", encoding="utf-8") as f:
+def save_history(history):
+    with open(path("history.json"), "w", encoding="utf-8") as f:
         json.dump(history, f, ensure_ascii=False, indent=2)
+
+
+def add_history_entry(entry_type: str, target: str, username: str, before, after):
+    """모든 저장 동작(덱/메모/레이드)에서 공통으로 호출하는 이력 기록 함수"""
+    history = load_history()
+    history.append({
+        "type": entry_type,
+        "target": target,
+        "username": username,
+        "timestamp": now_kst(),
+        "before": before,
+        "after": after,
+    })
+    save_history(history)
 
 
 # =========================================================
@@ -226,7 +263,7 @@ class DeckUpdate(BaseModel):
     equipment: str = ""
     notes: str = ""
     username: str
-    password: str  # 공유 비밀번호 (덱 수정 권한 확인용)
+    password: str
 
 
 class SignupRequest(BaseModel):
@@ -290,7 +327,7 @@ def get_guide():
 def update_deck(deck_name: str, update: DeckUpdate):
     """
     특정 덱 하나의 정보를 통째로 덮어씀.
-    수정 전/후 내용을 deck_history.json에 기록해서 "정정 내역" 탭에서 확인 가능하게 함.
+    수정 전/후 내용을 통합 이력(history.json)에 기록.
     """
     check_login(update.username, update.password)
 
@@ -306,28 +343,19 @@ def update_deck(deck_name: str, update: DeckUpdate):
     guide_data[deck_name] = after
     save_guide_data(guide_data)
 
-    # 수정 이력 기록 (변경 전/후 내용과 시각)
-    history = load_deck_history()
-    history.append({
-        "deck_name": deck_name,
-        "before": before,
-        "after": after,
-        "timestamp": datetime.now(ZoneInfo("Asia/Seoul")).strftime("%Y-%m-%d %H:%M"),
-        "username": update.username,   # 이 줄 추가
-    })
-    save_deck_history(history)
+    add_history_entry("deck", deck_name, update.username, before, after)
 
     return {"message": f"{deck_name} 정보가 수정되었습니다."}
 
 
 # =========================================================
-# 수정 이력 조회 ("정정 내역" 탭)
+# 통합 수정 이력 조회 ("정정 내역" 탭)
 # =========================================================
 
 @app.get("/corrections")
 def get_corrections_list():
-    """덱 수정 이력을 최신순으로 반환"""
-    history = load_deck_history()
+    """모든 저장 동작(덱/메모/레이드)의 이력을 최신순으로 반환"""
+    history = load_history()
     return list(reversed(history))
 
 
@@ -343,7 +371,13 @@ def get_memo():
 @app.put("/memo")
 def update_memo(body: MemoUpdate):
     check_login(body.username, body.password)
-    save_memo({"content": body.content})
+
+    before = load_memo()
+    after = {"content": body.content}
+    save_memo(after)
+
+    add_history_entry("memo", "메모장", body.username, before.get("content", ""), body.content)
+
     return {"message": "메모가 저장되었습니다."}
 
 
@@ -371,14 +405,24 @@ def update_raid(category: str, update: RaidUpdate):
         raise HTTPException(status_code=404, detail="존재하지 않는 카테고리입니다.")
 
     entry = raid_data[category]
+
     if entry["type"] == "single":
+        before = entry.get("content", "")
         entry["content"] = update.content
+        target_label = category
+        after = update.content
     else:  # "list" 타입 (보스별 관리)
         if not update.boss or update.boss not in entry["bosses"]:
             raise HTTPException(status_code=400, detail="존재하지 않는 보스입니다.")
+        before = entry["bosses"].get(update.boss, "")
         entry["bosses"][update.boss] = update.content
+        target_label = f"{category} - {update.boss}"
+        after = update.content
 
     save_raid_data(raid_data)
+
+    add_history_entry("raid", target_label, update.username, before, after)
+
     return {"message": "저장되었습니다."}
 
 
