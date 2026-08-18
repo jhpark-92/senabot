@@ -87,6 +87,7 @@ def ensure_data_files():
                 "bosses": {"칼리스트라": "", "아스트레아": "", "레오니드": ""},
             },
         },
+        "notices.json": [],
     }
     for filename, empty_value in defaults.items():
         dest = path(filename)
@@ -705,3 +706,68 @@ def get_activity_log(username: str, password: str, username_filter: str = ""):
     if username_filter:
         logs = [l for l in logs if l["username"] == username_filter]
     return list(reversed(logs))
+
+
+def load_notices():
+    try:
+        with open(path("notices.json"), "r", encoding="utf-8") as f:
+            return json.load(f)
+    except FileNotFoundError:
+        return []
+
+
+def save_notices(notices):
+    with open(path("notices.json"), "w", encoding="utf-8") as f:
+        json.dump(notices, f, ensure_ascii=False, indent=2)
+
+
+class NoticeCreate(BaseModel):
+    title: str
+    content: str
+    username: str
+    password: str
+
+
+class NoticeDelete(BaseModel):
+    username: str
+    password: str
+
+
+@app.get("/notices")
+def get_notices():
+    """공지사항 목록을 최신순으로 반환. 인증 불필요 (누구나 조회 가능)."""
+    notices = load_notices()
+    return list(reversed(notices))
+
+
+@app.post("/notices")
+def create_notice(body: NoticeCreate):
+    """새 공지사항 등록. admin만 가능."""
+    check_admin_login(body.username, body.password)
+
+    notices = load_notices()
+    new_id = (max([n["id"] for n in notices], default=0)) + 1
+    notices.append({
+        "id": new_id,
+        "title": body.title,
+        "content": body.content,
+        "username": body.username,
+        "timestamp": now_kst(),
+    })
+    save_notices(notices)
+
+    add_activity_log("save", body.username, f"공지 등록: {body.title}")
+
+    return {"message": "공지사항이 등록되었습니다."}
+
+
+@app.delete("/notices/{notice_id}")
+def delete_notice(notice_id: int, body: NoticeDelete):
+    """공지사항 삭제. admin만 가능."""
+    check_admin_login(body.username, body.password)
+
+    notices = load_notices()
+    notices = [n for n in notices if n["id"] != notice_id]
+    save_notices(notices)
+
+    return {"message": "공지사항이 삭제되었습니다."}

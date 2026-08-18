@@ -320,6 +320,7 @@
 
   <div class="tabs">
     <div class="tab active" data-view="chat">챗봇</div>
+    <div class="tab" data-view="notices">공지사항</div>
     <div class="tab" data-view="guide">가이드 보기</div>
     <div class="tab" data-view="edit">덱 수정</div> 
     <div class="tab" data-view="raid-강림">강림</div>
@@ -437,6 +438,21 @@
         </select>
       </div>
       <div id="activityLogList"></div>
+    </section>
+
+    <!-- ---------- 공지사항 ---------- -->
+    <section id="view-notices" class="view">
+      <div id="noticeWriteBox" style="display:none; margin-bottom:20px;">
+        <div class="edit-form">
+          <label>제목</label>
+          <input type="text" id="noticeTitleInput" />
+          <label>내용</label>
+          <textarea id="noticeContentInput" rows="4"></textarea>
+          <button class="save-btn" id="createNoticeBtn">등록</button>
+          <div class="save-status" id="noticeStatus"></div>
+        </div>
+      </div>
+      <div id="noticesList"></div>
     </section>
 
   </main>
@@ -603,6 +619,7 @@ function initApp() {
       if (tab.dataset.view === 'raid-파괴신') loadRaidSingle('파괴신');
       if (tab.dataset.view === 'admin') loadAdminData();
       if (tab.dataset.view === 'activitylog') loadActivityLogData();   
+      if (tab.dataset.view === 'notices') loadNotices();
     });
   });
 
@@ -1267,6 +1284,75 @@ function initApp() {
     });
   }
 }
+
+  async function loadNotices() {
+    const { username } = getAuth();
+    if (username === 'admin') {
+      document.getElementById('noticeWriteBox').style.display = 'block';
+    }
+
+    const res = await fetch('/notices');
+    const notices = await res.json();
+    const listEl = document.getElementById('noticesList');
+
+    if (!notices.length) {
+      listEl.innerHTML = '<div class="empty-state">등록된 공지사항이 없습니다.</div>';
+      return;
+    }
+
+    listEl.innerHTML = notices.map(n => `
+      <div class="correction-item">
+        <div class="deck-title">${n.title}</div>
+        <div class="timestamp">${n.timestamp} · ${n.username}</div>
+        <div class="detail-field-value" style="margin-top:8px;">${n.content}</div>
+        ${username === 'admin' ? `<button class="save-btn danger-save-btn" style="margin-top:10px; padding: 6px 14px; font-size:12px;" data-id="${n.id}">삭제</button>` : ''}
+      </div>
+    `).join('');
+
+    if (username === 'admin') {
+      listEl.querySelectorAll('button').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          if (!confirm('이 공지사항을 삭제하시겠습니까?')) return;
+          const { username, password } = getAuth();
+          await fetch('/notices/' + btn.dataset.id, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password })
+          });
+          loadNotices();
+        });
+      });
+    }
+  }
+
+  document.getElementById('createNoticeBtn').addEventListener('click', async () => {
+    const status = document.getElementById('noticeStatus');
+    const title = document.getElementById('noticeTitleInput').value.trim();
+    const content = document.getElementById('noticeContentInput').value.trim();
+    if (!title || !content) {
+      status.textContent = '제목과 내용을 입력해주세요.';
+      status.className = 'save-status err';
+      return;
+    }
+    const { username, password } = getAuth();
+
+    try {
+      const res = await fetch('/notices', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, content, username, password })
+      });
+      if (!res.ok) throw new Error();
+      document.getElementById('noticeTitleInput').value = '';
+      document.getElementById('noticeContentInput').value = '';
+      status.textContent = '등록되었습니다.';
+      status.className = 'save-status ok';
+      loadNotices();
+    } catch (e) {
+      status.textContent = '등록에 실패했습니다.';
+      status.className = 'save-status err';
+    }
+  });
 </script>
 
 </body>
