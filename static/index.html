@@ -189,12 +189,19 @@
   }
   .clear-btn:hover { border-color: var(--danger); color: var(--danger); }
 
-  /* ===== 정정 내역(덱 수정 이력) 뷰 ===== */
+  /* ===== 정정 내역 (통합 이력) 뷰 ===== */
   .correction-item {
     background: var(--panel); border: 1px solid var(--border); border-left: 3px solid var(--gold-dim);
     border-radius: 4px; padding: 14px 16px; margin-bottom: 10px; font-size: 13.5px;
   }
   .correction-item .deck-title { color: var(--gold); font-weight: 600; margin-bottom: 4px; }
+  .correction-item .type-badge {
+    display: inline-block; font-size: 10.5px; padding: 1px 7px; border-radius: 10px;
+    margin-left: 8px; vertical-align: middle; font-weight: 600;
+  }
+  .type-badge.deck { background: rgba(212,166,86,.18); color: var(--gold); }
+  .type-badge.memo { background: rgba(95,168,118,.18); color: var(--ok); }
+  .type-badge.raid { background: rgba(193,88,79,.18); color: var(--danger); }
   .correction-item .timestamp { color: var(--text-dim); font-size: 11.5px; margin-bottom: 6px; }
   .correction-item .changed { color: var(--ok); }
   .empty-state { color: var(--text-dim); font-size: 13.5px; padding: 24px; text-align: center; }
@@ -358,7 +365,7 @@
       </div>
     </section>
 
-    <!-- ---------- 정정 내역 탭 (덱 수정 이력 표시) ---------- -->
+    <!-- ---------- 정정 내역 탭 (통합 이력: 덱/메모/레이드) ---------- -->
     <section id="view-corrections" class="view">
       <div id="correctionsList"></div>
     </section>
@@ -394,7 +401,7 @@
 
     <!-- ---------- 메모장 탭 (admin 전용) ---------- -->
     <section id="view-memo" class="view">
-      <textarea id="memoTextarea" class="full-textarea" placeholder="수정하고 싶은 내용을 자유롭게 적어두세요."></textarea>
+      <textarea id="memoTextarea" class="full-textarea" placeholder="수정하고 싶은 내용을 자유롭게 적어두세요. 길드원 전체가 함께 보는 메모장입니다."></textarea>
       <div class="footer-row">
         <div id="memoStatus" style="font-size:12.5px;"></div>
         <button class="save-btn" id="saveMemoBtn" style="margin-top:0;">저장</button>
@@ -477,9 +484,9 @@ async function doLogin(username, password, silent) {
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.detail);
+    // 로그인 성공 시 브라우저에 저장 -> 다음 방문 때 자동 로그인 + 모든 저장 작업에 재사용
     localStorage.setItem('sena_bot_username', username);
     localStorage.setItem('sena_bot_userpw', password);
-    localStorage.setItem('sena_bot_password', password); // 덱 수정/레이드/메모 등에서 재사용
     showApp();
     return true;
   } catch (e) {
@@ -531,6 +538,14 @@ let guideDataCache = null;
 let raidDataCache = null;
 let appInitialized = false;
 
+// 저장 작업에 필요한 로그인 정보를 한 번에 꺼내는 헬퍼
+function getAuth() {
+  return {
+    username: localStorage.getItem('sena_bot_username'),
+    password: localStorage.getItem('sena_bot_userpw'),
+  };
+}
+
 function initApp() {
   if (appInitialized) return;
   appInitialized = true;
@@ -538,7 +553,6 @@ function initApp() {
   document.getElementById('logoutBtn').addEventListener('click', () => {
     localStorage.removeItem('sena_bot_username');
     localStorage.removeItem('sena_bot_userpw');
-    localStorage.removeItem('sena_bot_password');
     location.reload();
   });
 
@@ -723,9 +737,8 @@ function initApp() {
     btn.disabled = true;
     status.textContent = '';
 
-    const username = localStorage.getItem('sena_bot_username');
-    const password = localStorage.getItem('sena_bot_userpw');
-    if (!password) {
+    const { username, password } = getAuth();
+    if (!username || !password) {
       status.textContent = '로그인이 필요합니다.';
       status.className = 'save-status err';
       btn.disabled = false;
@@ -762,7 +775,7 @@ function initApp() {
     }
   }
 
-  /* -------------------- 5. 정정 내역 (덱 수정 이력) -------------------- */
+  /* -------------------- 5. 정정 내역 (통합 이력: 덱/메모/레이드) -------------------- */
   window.loadCorrections = async function() {
     const list = document.getElementById('correctionsList');
     list.textContent = '불러오는 중...';
@@ -773,19 +786,32 @@ function initApp() {
         list.innerHTML = '<div class="empty-state">아직 수정 이력이 없습니다.</div>';
         return;
       }
+      const typeLabels = { deck: '덱 수정', memo: '메모', raid: '레이드' };
       const fieldLabels = { counter_decks: '카운터 조합', priority_note: '우선순위', equipment: '장비 세팅', notes: '메모' };
+
       list.innerHTML = data.map(h => {
-        const changedFields = [];
-        for (const key in fieldLabels) {
-          const beforeVal = JSON.stringify(h.before[key] || (key === 'counter_decks' ? [] : ''));
-          const afterVal = JSON.stringify(h.after[key] || (key === 'counter_decks' ? [] : ''));
-          if (beforeVal !== afterVal) changedFields.push(fieldLabels[key]);
+        const badge = `<span class="type-badge ${h.type}">${typeLabels[h.type] || h.type}</span>`;
+        let detailLine = '';
+
+        if (h.type === 'deck') {
+          // 덱 수정: 어떤 필드가 바뀌었는지 비교해서 표시
+          const changedFields = [];
+          for (const key in fieldLabels) {
+            const beforeVal = JSON.stringify((h.before || {})[key] || (key === 'counter_decks' ? [] : ''));
+            const afterVal = JSON.stringify((h.after || {})[key] || (key === 'counter_decks' ? [] : ''));
+            if (beforeVal !== afterVal) changedFields.push(fieldLabels[key]);
+          }
+          detailLine = `변경된 항목: <span class="changed">${changedFields.join(', ') || '없음'}</span>`;
+        } else {
+          // 메모 / 레이드: 텍스트 저장이라 "내용이 변경됨"으로만 표시
+          detailLine = `<span class="changed">내용이 저장되었습니다.</span>`;
         }
+
         return `
           <div class="correction-item">
-            <div class="deck-title">${h.deck_name}</div>
+            <div class="deck-title">${h.target}${badge}</div>
             <div class="timestamp">${h.timestamp} · ${h.username || '알 수 없음'}</div>
-            <div>변경된 항목: <span class="changed">${changedFields.join(', ') || '없음'}</span></div>
+            <div>${detailLine}</div>
           </div>
         `;
       }).join('');
@@ -808,9 +834,7 @@ function initApp() {
   document.getElementById('saveMemoBtn').addEventListener('click', async () => {
     const btn = document.getElementById('saveMemoBtn');
     const status = document.getElementById('memoStatus');
-    const username = localStorage.getItem('sena_bot_username');
-    const password = localStorage.getItem('sena_bot_userpw');
-
+    const { username, password } = getAuth();
     btn.disabled = true;
     status.textContent = '';
 
@@ -837,7 +861,6 @@ function initApp() {
 
   /* -------------------- 7. 레이드 공략 (강림 / 파괴신 / 돌발레이드) -------------------- */
 
-  // /raid 데이터를 최초 1회만 불러와서 캐싱
   async function loadRaidData() {
     if (!raidDataCache) {
       const res = await fetch('/raid');
@@ -881,8 +904,7 @@ function initApp() {
     document.getElementById('raidBossSaveBtn').addEventListener('click', async () => {
       const btn = document.getElementById('raidBossSaveBtn');
       const status = document.getElementById('raidBossStatus');
-      const username = localStorage.getItem('sena_bot_username');
-      const password = localStorage.getItem('sena_bot_userpw');
+      const { username, password } = getAuth();
       btn.disabled = true;
       status.textContent = '';
       try {
@@ -919,8 +941,7 @@ function initApp() {
   document.getElementById('raidSingleSaveBtn-파괴신').addEventListener('click', async () => {
     const btn = document.getElementById('raidSingleSaveBtn-파괴신');
     const status = document.getElementById('raidSingleStatus-파괴신');
-    const username = localStorage.getItem('sena_bot_username');
-    const password = localStorage.getItem('sena_bot_userpw');
+    const { username, password } = getAuth();
     btn.disabled = true;
     status.textContent = '';
     try {
