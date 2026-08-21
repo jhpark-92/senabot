@@ -259,6 +259,14 @@
   .pending-item button.danger-btn { background: var(--danger); color: #fff; }
   .admin-section-title { color: var(--gold); font-size: 15px; margin-bottom: 14px; }
 
+  .page-btn {
+    background: var(--panel); border: 1px solid var(--border); color: var(--text);
+    padding: 7px 16px; border-radius: 5px; font-size: 13px; cursor: pointer;
+  }
+  .page-btn:hover:not(:disabled) { border-color: var(--gold-dim); color: var(--gold); }
+  .page-btn:disabled { opacity: .4; cursor: default; }
+  .page-info { color: var(--text-dim); font-size: 13px; }
+
   /* ===== 모바일 반응형 ===== */
   @media (max-width: 768px) {
     .topbar { padding: 14px 16px; gap: 10px; }
@@ -475,6 +483,7 @@
         </select>
       </div>
       <div id="activityLogList"></div>
+      <div id="logPagination" style="display:flex; justify-content:center; align-items:center; gap:14px; margin-top:20px;"></div>
     </section>
 
     <!-- ---------- 공지사항 ---------- -->
@@ -1487,29 +1496,63 @@ function initApp() {
       allUsers.map(u => `<option value="${u.username}">${u.username}</option>`).join('');
 
     const typeLabels = { login: '로그인', chat: '챗봇 질문', save: '저장' };
+    const PAGE_SIZE = 20;
+    let currentPage = 1;
+    let currentLogs = logs;
 
-    function render(filteredLogs) {
+    function renderPage() {
       const listEl = document.getElementById('activityLogList');
-      if (!filteredLogs.length) {
+      if (!currentLogs.length) {
         listEl.innerHTML = '<div class="empty-state">활동 로그가 없습니다.</div>';
+        document.getElementById('logPagination').innerHTML = '';
         return;
       }
-      listEl.innerHTML = filteredLogs.map(l => `
+
+      const totalPages = Math.ceil(currentLogs.length / PAGE_SIZE);
+      if (currentPage > totalPages) currentPage = totalPages;
+      if (currentPage < 1) currentPage = 1;
+
+      const start = (currentPage - 1) * PAGE_SIZE;
+      const pageItems = currentLogs.slice(start, start + PAGE_SIZE);
+
+      listEl.innerHTML = pageItems.map(l => `
         <div class="correction-item">
           <div class="deck-title">${l.username || '알 수 없음'}<span class="type-badge deck">${typeLabels[l.type] || l.type}</span></div>
           <div class="timestamp">${l.timestamp}</div>
           ${l.detail ? `<div class="detail-field-value">${l.detail}</div>` : ''}
         </div>
       `).join('');
+
+      renderPaginationControls(totalPages);
     }
 
-    render(logs);
+    function renderPaginationControls(totalPages) {
+      const pagEl = document.getElementById('logPagination');
+      if (totalPages <= 1) {
+        pagEl.innerHTML = '';
+        return;
+      }
+
+      let buttons = '';
+      buttons += `<button class="page-btn" id="pagPrev" ${currentPage === 1 ? 'disabled' : ''}>이전</button>`;
+      buttons += `<span class="page-info">${currentPage} / ${totalPages}</span>`;
+      buttons += `<button class="page-btn" id="pagNext" ${currentPage === totalPages ? 'disabled' : ''}>다음</button>`;
+      pagEl.innerHTML = buttons;
+
+      const prevBtn = document.getElementById('pagPrev');
+      const nextBtn = document.getElementById('pagNext');
+      if (prevBtn) prevBtn.addEventListener('click', () => { currentPage--; renderPage(); });
+      if (nextBtn) nextBtn.addEventListener('click', () => { currentPage++; renderPage(); });
+    }
+
+    renderPage();
 
     filterEl.addEventListener('change', async () => {
       const username = filterEl.value;
       const res = await fetch(`/activity-log?username=${encodeURIComponent(adminUsername)}&password=${encodeURIComponent(adminPassword)}&username_filter=${encodeURIComponent(username)}`);
-      const filtered = await res.json();
-      render(filtered);
+      currentLogs = await res.json();
+      currentPage = 1;
+      renderPage();
     });
   }
 }
