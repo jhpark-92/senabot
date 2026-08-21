@@ -13,7 +13,7 @@ import getpass
 SITE_URL = "https://senabot-production.up.railway.app"
 
 # 이번에 업데이트할 덱 이름들 (update_guide.py 실행 결과에 나온 리스트를 그대로 넣으면 됨)
-DECK_NAMES_TO_PUSH = ["겔아클", "밀리아 스쿨드 실베스타", "루겔아", "선란덱"]
+DECK_NAMES_TO_PUSH = ['겔아클', '밀리아 스쿨드 실베스타', '루겔아', '선란덱', '여오칼', '여델칼', '여클칼', '여쁘칼', '선란 초선 + @덱']
 
 
 def main():
