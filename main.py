@@ -92,6 +92,7 @@ def ensure_data_files():
             },
         },
         "notices.json": [],
+        "calculator_data.json": {},
     }
     for filename, empty_value in defaults.items():
         dest = path(filename)
@@ -783,3 +784,54 @@ def delete_notice(notice_id: int, body: NoticeDelete):
     notices = [n for n in notices if n["id"] != notice_id]
     save_notices(notices)
     return {"message": "공지사항이 삭제되었습니다."}
+
+@app.get("/calculator")
+def get_calculator(username: str = "", password: str = ""):
+    """파괴신 계산기 페이지. 로그인 정보가 유효할 때만 파일을 반환."""
+    if not username or not password:
+        raise HTTPException(status_code=403, detail="로그인이 필요합니다.")
+    check_login(username, password)
+    return FileResponse("calculator.html")
+
+def load_calculator_data():
+    try:
+        with open(path("calculator_data.json"), "r", encoding="utf-8") as f:
+            return json.load(f)
+    except FileNotFoundError:
+        return {}
+
+
+def save_calculator_data(data):
+    with open(path("calculator_data.json"), "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+
+class CalculatorSave(BaseModel):
+    username: str
+    password: str
+    stats: dict
+    rings: dict
+    pet_potential: float
+
+
+@app.get("/calculator-data")
+def get_calculator_data(username: str, password: str):
+    """로그인한 계정이 저장해둔 계산기 입력값을 반환. 없으면 빈 객체."""
+    check_login(username, password)
+    all_data = load_calculator_data()
+    return all_data.get(username, {})
+
+
+@app.put("/calculator-data")
+def save_calculator_data_endpoint(body: CalculatorSave):
+    """계산기 입력값을 계정별로 저장."""
+    check_login(body.username, body.password)
+    all_data = load_calculator_data()
+    all_data[body.username] = {
+        "stats": body.stats,
+        "rings": body.rings,
+        "pet_potential": body.pet_potential,
+    }
+    save_calculator_data(all_data)
+    add_activity_log("save", body.username, "파괴신 계산기 저장")
+    return {"message": "저장되었습니다."}

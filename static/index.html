@@ -295,6 +295,8 @@
     #lockScreen .lock-box { width: 100%; max-width: 300px; }
 
     .pending-item { flex-direction: column; align-items: flex-start; gap: 8px; }
+
+    #view-calculator iframe { height: 80vh; }
   }
 
   @media (max-width: 420px) {
@@ -356,6 +358,7 @@
     
     <div class="tab" data-view="raid-강림">강림</div>
     <div class="tab" data-view="raid-파괴신">파괴신</div>
+    <div class="tab" data-view="calculator">파괴신 계산기</div>
     <div class="tab" data-view="raid-돌발레이드">돌발레이드</div>
     <div class="tab" id="memoTab" data-view="memo" style="display:none;">메모장</div>
     <div class="tab" id="adminTab" data-view="admin" style="display:none;">사용자 관리</div>
@@ -522,6 +525,10 @@
     </section>
 
   </main>
+  <!-- 파괴신 계산기 -->
+  <section id="view-calculator" class="view" style="max-width: none; margin-left: calc(50% - 50vw); margin-right: calc(50% - 50vw); padding: 0 20px;">
+    <iframe id="calculatorFrame" style="width:100%; height:85vh; border:none; display:block;"></iframe>
+  </section>
 
 </div>
 
@@ -679,6 +686,11 @@ function initApp() {
       if (tab.dataset.view === 'admin') loadAdminData();
       if (tab.dataset.view === 'activitylog') loadActivityLogData();   
       if (tab.dataset.view === 'notices') loadNotices();
+      if (tab.dataset.view === 'calculator') {
+        const { username, password } = getAuth();
+        document.getElementById('calculatorFrame').src =
+          `/calculator?username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`;
+      }
     });
   });
 
