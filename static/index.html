@@ -295,8 +295,6 @@
     #lockScreen .lock-box { width: 100%; max-width: 300px; }
 
     .pending-item { flex-direction: column; align-items: flex-start; gap: 8px; }
-
-    #view-calculator iframe { height: 80vh; }
   }
 
   @media (max-width: 420px) {
@@ -526,14 +524,8 @@
 
   </main>
   <!-- 파괴신 계산기 -->
-  <section id="view-calculator" class="view" style="max-width: none;">
-    <!-- 모바일: 새 탭으로 열기 버튼 -->
-    <div id="calcMobileBtn" style="display:none; text-align:center; padding:60px 20px;">
-      <p style="color:var(--text-dim); margin-bottom:20px; font-size:14px;">모바일에서는 전체화면으로 여는 것을 권장합니다.</p>
-      <button class="save-btn" id="openCalcNewTab" style="margin-top:0;">파괴신 계산기 새 탭으로 열기</button>
-    </div>
-    <!-- PC: iframe으로 바로 표시 -->
-    <iframe id="calculatorFrame" style="width:100%; height:85vh; border:none; display:block;"></iframe>
+  <section id="view-calculator" class="view">
+    <iframe id="calculatorFrame" style="width:100%; height:75vh; border:none; display:block;"></iframe>
   </section>
 
 </div>
@@ -694,21 +686,8 @@ function initApp() {
       if (tab.dataset.view === 'notices') loadNotices();
       if (tab.dataset.view === 'calculator') {
         const { username, password } = getAuth();
-        const calcUrl = `/calculator?username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`;
-
-        if (window.innerWidth <= 768) {
-          // 모바일: iframe 숨기고 버튼만 표시
-          document.getElementById('calculatorFrame').style.display = 'none';
-          document.getElementById('calcMobileBtn').style.display = 'block';
-          document.getElementById('openCalcNewTab').onclick = () => {
-            window.open(calcUrl, '_blank');
-          };
-        } else {
-          // PC: iframe으로 바로 표시
-          document.getElementById('calcMobileBtn').style.display = 'none';
-          document.getElementById('calculatorFrame').style.display = 'block';
-          document.getElementById('calculatorFrame').src = calcUrl;
-        }
+        document.getElementById('calculatorFrame').src =
+          `/calculator?username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`;
       }
     });
   });

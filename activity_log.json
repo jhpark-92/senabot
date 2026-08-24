@@ -160,5 +160,17 @@
     "username": "admin",
     "timestamp": "2026-08-24 14:56",
     "detail": ""
+  },
+  {
+    "type": "login",
+    "username": "admin",
+    "timestamp": "2026-08-24 15:19",
+    "detail": ""
+  },
+  {
+    "type": "login",
+    "username": "admin",
+    "timestamp": "2026-08-24 15:23",
+    "detail": ""
   }
 ]
