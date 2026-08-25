@@ -91,7 +91,14 @@
     <div class="eyebrow">파괴신 · 강림 원정대 · 4턴~70턴 전체 로테이션</div>
     <h1>딜 계산 — 전체 턴 예측 (2라운드 딜만 계산)</h1>
     <p class="sub">캐릭터 스탯을 바꾸면 <b style="color:var(--gold2)">70턴 전체 표가 실시간으로 재계산</b>돼. 버프/디버프 타이밍(누가 언제 뭘 쓰는지, 지속시간 규칙)은 전부 고정이고, <b style="color:var(--gold2)">스탯 숫자만</b> 바꾸는 용도.</p>
-    <p class="sub" style="color:#f0b95c;"> 헤브니아 버프공%: 상시 패시브 25% + 각성기 추가 23% (합 48%). <br/> ATK 공식: <code>(도감×(1+장비공%+초월공%+펫잠재%)+장비깡공+잠재능력+펫깡공+도감×진형%)×(1+버프공%+펫공15%)</code>. 파이 화상보너스는 스킬계수에 직접 +0.70. </p>
+    <!-- <p class="sub" style="color:#f0b95c;"> 헤브니아 버프공%: 상시 패시브 25% + 각성기 추가 23% (합 48%). <br/> ATK 공식: <code>(도감×(1+장비공%+초월공%+펫잠재%)+장비깡공+잠재능력+펫깡공+도감×진형%)×(1+버프공%+펫공15%)</code>. 파이 화상보너스는 스킬계수에 직접 +0.70. </p> -->
+    <div style="background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:16px 20px; margin-top:14px; font-size:13px; line-height:1.7; color:var(--sub);">
+      <div style="color:var(--gold); font-weight:700; margin-bottom:6px;">사용법</div>
+      <div>1. 아래 "캐릭터 스탯 입력"에서 각 캐릭터의 물공/치확/치피/약공/피증 및 반지 세팅을 입력하세요. 게임 내 캐릭터 상세 화면과 동일한 값을 넣으면 됩니다.</div>
+      <div>2. 값을 바꾸면 아래 표가 자동으로 재계산됩니다. 스킬 순서와 버프 타이밍은 고정이며, 스탯 숫자만 바꾸는 용도입니다.</div>
+      <div>3. 스탯 화면을 캡처해서 이미지로 올리면(여러 장 가능) 자동으로 값을 채워줍니다. 자동 인식 후에는 값이 맞는지 한 번 확인해주세요.</div>
+      <div>4. 입력이 끝나면 "내 계정에 저장" 버튼을 눌러야 다음에 접속했을 때도 값이 유지됩니다. 저장하지 않으면 새로고침 시 값이 초기화됩니다.</div>
+    </div>
     <div style="display:flex; align-items:center; gap:10px; margin-top:14px;">
       <button id="saveCalcBtn" style="background:var(--gold); color:#1a1206; border:none; border-radius:8px; padding:8px 18px; font-weight:700; font-size:13px; cursor:pointer;">내 계정에 저장</button>
       <span id="calcSaveStatus" style="font-size:12px; color:var(--sub);"></span>

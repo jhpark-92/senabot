@@ -448,5 +448,11 @@
     "username": "admin",
     "timestamp": "2026-08-25 14:06",
     "detail": "파괴신 계산기 저장"
+  },
+  {
+    "type": "login",
+    "username": "admin",
+    "timestamp": "2026-08-25 14:11",
+    "detail": ""
   }
 ]
