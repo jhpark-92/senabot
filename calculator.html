@@ -99,6 +99,14 @@
   </header>
 
   <h2>캐릭터 스탯 입력</h2>
+  <div id="dropZone" style="border:2px dashed var(--line); border-radius:10px; padding:20px; margin-bottom:14px; text-align:center; background:var(--panel); transition:border-color .2s;">
+    <p style="font-size:13px; color:var(--sub); margin:0 0 10px;">스탯 화면 캡처 이미지를 여기로 드래그하거나, 클릭해서 선택하세요 (여러 장 가능)</p>
+    <input type="file" id="statImageInput" accept="image/*" multiple style="display:none;" />
+    <button id="chooseFileBtn" style="background:var(--panel2); border:1px solid var(--line); color:var(--text); border-radius:8px; padding:6px 16px; font-size:13px; cursor:pointer;">파일 선택</button>
+    <button id="extractStatsBtn" style="background:var(--gold); color:#1a1206; border:none; border-radius:8px; padding:6px 16px; font-weight:700; font-size:13px; cursor:pointer; margin-left:8px;">이미지로 불러오기</button>
+    <div id="selectedFileNames" style="font-size:11px; color:var(--sub); margin-top:8px;"></div>
+    <div id="extractStatus" style="font-size:12px; margin-top:6px;"></div>
+  </div>
   <div id="petPotentialRow" style="display:flex; flex-wrap:wrap; align-items:center; gap:8px 12px; margin-bottom:16px; background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:12px 16px;">
     <label style="font-size:13px; color:#a3e635; font-weight:700; white-space:nowrap;">윈디 펫 (공용) 잠재(공격력%) 합계</label>
     <input type="number" step="any" id="petPotentialInput" style="width:100px; flex-shrink:0; background:var(--panel2); border:1px solid var(--line); border-radius:6px; color:var(--text); padding:6px 8px; font-size:13px; text-align:right;">
@@ -724,6 +732,101 @@ loadSavedCalculatorData().then(() => {
   renderStatPanel();
   renderAll();
 });
+
+const CHAR_NAME_MAP = {
+  '헤브니아': 'hebnia', '파이': 'pi', '세인': 'sein', '샤오': 'shao', '비스킷': 'biscuit',
+};
+
+document.getElementById('extractStatsBtn').addEventListener('click', async () => {
+  const input = document.getElementById('statImageInput');
+  const statusEl = document.getElementById('extractStatus');
+  if (!input.files.length) {
+    statusEl.textContent = '이미지를 선택해주세요.';
+    return;
+  }
+
+  statusEl.textContent = '분석 중... (시간이 걸릴 수 있어요)';
+
+  const formData = new FormData();
+  for (const file of input.files) formData.append('files', file);
+
+  try {
+    const res = await fetch(`/extract-character-stats?username=${encodeURIComponent(CALC_USERNAME)}&password=${encodeURIComponent(CALC_PASSWORD)}`, {
+      method: 'POST',
+      body: formData,
+    });
+    if (!res.ok) throw new Error();
+    const { results } = await res.json();
+
+    let successCount = 0;
+    results.forEach(r => {
+      if (r.error) return;
+      // 이름에 "주인을 잃은" 같은 접두사가 붙어있어도 매칭되도록, 이름이 포함되는지로 확인
+      const matchedKey = Object.keys(CHAR_NAME_MAP).find(name => (r.character_name || '').includes(name));
+      if (!matchedKey) return;
+      const key = CHAR_NAME_MAP[matchedKey];
+
+      if (!S[key]) return;
+      if (key === 'biscuit') {
+        if (r.magic_atk != null) S[key].matk = r.magic_atk;
+        if (r.defense != null) S[key].defense = r.defense;
+      } else {
+        if (r.physical_atk != null) S[key].atk = r.physical_atk;
+      }
+      if (r.crit_chance != null) S[key].cc = r.crit_chance;
+      if (r.crit_damage != null) S[key].cd = r.crit_damage;
+      if (r.weakness_chance != null) S[key].wc = r.weakness_chance;
+      if (r.damage_amp != null) S[key].amp = r.damage_amp;
+      successCount++;
+    });
+
+    renderStatPanel();
+    renderAll();
+    statusEl.textContent = `${successCount}개 캐릭터 스탯을 불러왔습니다.`;
+    statusEl.style.color = '#7fd88f';
+  } catch (e) {
+    statusEl.textContent = '분석에 실패했습니다.';
+    statusEl.style.color = '#f87171';
+  }
+});
+
+const dropZone = document.getElementById('dropZone');
+const statImageInput = document.getElementById('statImageInput');
+const selectedFileNames = document.getElementById('selectedFileNames');
+
+document.getElementById('chooseFileBtn').addEventListener('click', () => statImageInput.click());
+
+statImageInput.addEventListener('change', () => {
+  updateSelectedFileNames(statImageInput.files);
+});
+
+['dragenter', 'dragover'].forEach(evt => {
+  dropZone.addEventListener(evt, (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dropZone.style.borderColor = 'var(--gold)';
+  });
+});
+['dragleave', 'drop'].forEach(evt => {
+  dropZone.addEventListener(evt, (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dropZone.style.borderColor = 'var(--line)';
+  });
+});
+dropZone.addEventListener('drop', (e) => {
+  const files = e.dataTransfer.files;
+  if (files.length) {
+    statImageInput.files = files;
+    updateSelectedFileNames(files);
+  }
+});
+
+function updateSelectedFileNames(files) {
+  selectedFileNames.textContent = files.length
+    ? `${files.length}개 파일 선택됨: ${Array.from(files).map(f => f.name).join(', ')}`
+    : '';
+}
 
 </script>
 </body>

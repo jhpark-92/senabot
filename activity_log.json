@@ -418,5 +418,35 @@
     "username": "admin",
     "timestamp": "2026-08-25 10:54",
     "detail": "파괴신 계산기 저장"
+  },
+  {
+    "type": "login",
+    "username": "admin",
+    "timestamp": "2026-08-25 14:00",
+    "detail": ""
+  },
+  {
+    "type": "login",
+    "username": "admin",
+    "timestamp": "2026-08-25 14:00",
+    "detail": ""
+  },
+  {
+    "type": "login",
+    "username": "admin",
+    "timestamp": "2026-08-25 14:01",
+    "detail": ""
+  },
+  {
+    "type": "login",
+    "username": "admin",
+    "timestamp": "2026-08-25 14:04",
+    "detail": ""
+  },
+  {
+    "type": "save",
+    "username": "admin",
+    "timestamp": "2026-08-25 14:06",
+    "detail": "파괴신 계산기 저장"
   }
 ]

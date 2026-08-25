@@ -850,3 +850,63 @@ def get_all_calculator_data(username: str, password: str):
     """전체 계정의 계산기 저장 데이터를 반환. admin만 가능."""
     check_admin_login(username, password)
     return load_calculator_data()
+
+
+import base64
+from fastapi import UploadFile, File
+from google import genai
+
+EXTRACT_PROMPT = """이 이미지는 게임 캐릭터 스탯 화면입니다.
+다음 항목을 정확히 읽어서 JSON으로만 출력하세요. 다른 설명은 하지 마세요.
+
+{
+  "character_name": "화면에 보이는 캐릭터 이름 (예: 헤브니아, 파이, 세인, 샤오, 비스킷)",
+  "physical_atk": 숫자 또는 null (물리 공격력),
+  "magic_atk": 숫자 또는 null (마법 공격력, 비스킷처럼 마법형 캐릭터일 때만),
+  "defense": 숫자 또는 null (방어력, 비스킷처럼 방어형 캐릭터일 때만),
+  "crit_chance": 숫자 (치명타 확률, % 기호 제외한 숫자만),
+  "crit_damage": 숫자 (치명타 피해, % 기호 제외한 숫자만),
+  "weakness_chance": 숫자 (약점 공격 확률, % 기호 제외한 숫자만),
+  "damage_amp": 숫자 (피해 증폭, % 기호 제외한 숫자만)
+}
+"""
+
+
+@app.post("/extract-character-stats")
+async def extract_character_stats(
+    username: str,
+    password: str,
+    files: list[UploadFile] = File(...),
+):
+    """캐릭터 스탯 화면 캡처 이미지들을 Gemini Vision으로 읽어서 구조화된 스탯 목록 반환."""
+    check_login(username, password)
+
+    gemini_client = genai.Client(api_key=os.environ["GOOGLE_API_KEY"])
+    results = []
+
+    for file in files:
+        image_bytes = await file.read()
+        image_b64 = base64.b64encode(image_bytes).decode("utf-8")
+
+        response = gemini_client.models.generate_content(
+            model="gemini-3.6-flash",
+            contents=[{
+                "role": "user",
+                "parts": [
+                    {"text": EXTRACT_PROMPT},
+                    {"inline_data": {"mime_type": file.content_type, "data": image_b64}},
+                ],
+            }],
+        )
+
+        text = response.text.strip()
+        if text.startswith("```"):
+            text = text.split("```")[1].replace("json", "", 1).strip()
+
+        try:
+            parsed = json.loads(text)
+            results.append(parsed)
+        except Exception:
+            results.append({"error": "인식 실패", "raw": text})
+
+    return {"results": results}
