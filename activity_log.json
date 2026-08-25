@@ -454,5 +454,11 @@
     "username": "admin",
     "timestamp": "2026-08-25 14:11",
     "detail": ""
+  },
+  {
+    "type": "login",
+    "username": "admin",
+    "timestamp": "2026-08-25 14:16",
+    "detail": ""
   }
 ]
