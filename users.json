@@ -1,7 +1,12 @@
 {
-  "admin" :{
+  "admin": {
     "hashed": "3017b161aa81320825c61dacd033ca0d731f7ecd8adb150c783f3842599345c0",
     "salt": "07642e6fa366032b279cb65205ac0001",
+    "approved": true
+  },
+  "빤치": {
+    "hashed": "dcc03d369ac187485d02aca5c2af1c0e3be7efbe1c3536fa5e971971d211575d",
+    "salt": "33f1c3bdf478463dc87e87b4dbc9cfc6",
     "approved": true
   }
 }

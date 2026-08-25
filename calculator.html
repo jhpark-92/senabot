@@ -645,6 +645,7 @@ function renderAll(){
   totals.expected = computeExpectedTotal(rows);
   const dotTotal = rows.filter(r=>r[1]==='파괴신(도트)').reduce((s,r)=>s+r[3].n,0);
   renderSummaryCards(totals, dotTotal);
+  window.LATEST_THEORETICAL_MAX = totals.scw;
 }
 
 document.getElementById('filterbar').addEventListener('click',(e)=>{
@@ -698,6 +699,7 @@ async function saveCalculatorData() {
         stats: S,
         rings: state_rings,
         pet_potential: state_petPotential,
+        theoretical_max: window.LATEST_THEORETICAL_MAX || 0,
       })
     });
     if (!res.ok) throw new Error();

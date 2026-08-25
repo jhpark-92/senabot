@@ -23,7 +23,7 @@ import secrets
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
-from fastapi import FastAPI, HTTPException, File, UploadFile, Form
+from fastapi import FastAPI, HTTPException, File, UploadFile, Form, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
@@ -791,7 +791,14 @@ def get_calculator(username: str = "", password: str = ""):
     if not username or not password:
         raise HTTPException(status_code=403, detail="로그인이 필요합니다.")
     check_login(username, password)
-    return FileResponse("calculator.html")
+    return FileResponse(
+        "calculator.html",
+        headers={
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Pragma": "no-cache",
+            "Expires": "0",
+        }
+    )
 
 def load_calculator_data():
     try:
@@ -812,6 +819,7 @@ class CalculatorSave(BaseModel):
     stats: dict
     rings: dict
     pet_potential: float
+    theoretical_max: float = 0
 
 
 @app.get("/calculator-data")
@@ -831,7 +839,14 @@ def save_calculator_data_endpoint(body: CalculatorSave):
         "stats": body.stats,
         "rings": body.rings,
         "pet_potential": body.pet_potential,
+        "theoretical_max": body.theoretical_max,
     }
     save_calculator_data(all_data)
     add_activity_log("save", body.username, "파괴신 계산기 저장")
     return {"message": "저장되었습니다."}
+
+@app.get("/all-calculator-data")
+def get_all_calculator_data(username: str, password: str):
+    """전체 계정의 계산기 저장 데이터를 반환. admin만 가능."""
+    check_admin_login(username, password)
+    return load_calculator_data()

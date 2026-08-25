@@ -1,1 +1,129 @@
-{}
+{
+  "admin": {
+    "stats": {
+      "hebnia": {
+        "atk": 4615,
+        "cc": 87,
+        "cd": 270,
+        "wc": 25,
+        "amp": 14.4
+      },
+      "pi": {
+        "atk": 4795,
+        "cc": 91,
+        "cd": 282,
+        "wc": 25,
+        "amp": 12
+      },
+      "sein": {
+        "atk": 4585,
+        "cc": 59,
+        "cd": 318,
+        "wc": 35,
+        "amp": 16
+      },
+      "shao": {
+        "atk": 4622,
+        "cc": 99,
+        "cd": 264,
+        "wc": 20,
+        "amp": 4.8
+      },
+      "biscuit": {
+        "matk": 2328,
+        "defense": 2207,
+        "cc": 21,
+        "cd": 150,
+        "wc": 5,
+        "amp": 0
+      }
+    },
+    "rings": {
+      "hebnia": [
+        "tobeol",
+        "chihwak"
+      ],
+      "pi": [
+        "tobeol",
+        "chihwak"
+      ],
+      "sein": [
+        "tobeol",
+        "gongseong"
+      ],
+      "shao": [
+        "hwasang",
+        "chulhyeol"
+      ],
+      "biscuit": [
+        "hwasang",
+        "chulhyeol"
+      ]
+    },
+    "pet_potential": 63.0,
+    "theoretical_max": 13486372.491247192
+  },
+  "빤치": {
+    "stats": {
+      "hebnia": {
+        "atk": 4615,
+        "cc": 87,
+        "cd": 270,
+        "wc": 25,
+        "amp": 14.4
+      },
+      "pi": {
+        "atk": 4795,
+        "cc": 91,
+        "cd": 282,
+        "wc": 25,
+        "amp": 12
+      },
+      "sein": {
+        "atk": 4585,
+        "cc": 59,
+        "cd": 318,
+        "wc": 35,
+        "amp": 16
+      },
+      "shao": {
+        "atk": 4622,
+        "cc": 99,
+        "cd": 264,
+        "wc": 20,
+        "amp": 4.8
+      },
+      "biscuit": {
+        "matk": 2328,
+        "defense": 2207,
+        "cc": 21,
+        "cd": 150,
+        "wc": 5,
+        "amp": 0
+      }
+    },
+    "rings": {
+      "hebnia": [
+        "tobeol",
+        "chihwak"
+      ],
+      "pi": [
+        "tobeol",
+        "chihwak"
+      ],
+      "sein": [
+        "tobeol",
+        "gongseong"
+      ],
+      "shao": [
+        "hwasang",
+        "chulhyeol"
+      ],
+      "biscuit": [
+        "hwasang",
+        "chulhyeol"
+      ]
+    },
+    "pet_potential": 45.0
+  }
+}

@@ -172,5 +172,251 @@
     "username": "admin",
     "timestamp": "2026-08-24 15:23",
     "detail": ""
+  },
+  {
+    "type": "login",
+    "username": "admin",
+    "timestamp": "2026-08-25 09:26",
+    "detail": ""
+  },
+  {
+    "type": "login",
+    "username": "admin",
+    "timestamp": "2026-08-25 09:26",
+    "detail": ""
+  },
+  {
+    "type": "login",
+    "username": "admin",
+    "timestamp": "2026-08-25 09:26",
+    "detail": ""
+  },
+  {
+    "type": "login",
+    "username": "admin",
+    "timestamp": "2026-08-25 09:26",
+    "detail": ""
+  },
+  {
+    "type": "login",
+    "username": "admin",
+    "timestamp": "2026-08-25 09:34",
+    "detail": ""
+  },
+  {
+    "type": "login",
+    "username": "admin",
+    "timestamp": "2026-08-25 09:41",
+    "detail": ""
+  },
+  {
+    "type": "login",
+    "username": "admin",
+    "timestamp": "2026-08-25 10:05",
+    "detail": ""
+  },
+  {
+    "type": "login",
+    "username": "admin",
+    "timestamp": "2026-08-25 10:05",
+    "detail": ""
+  },
+  {
+    "type": "save",
+    "username": "admin",
+    "timestamp": "2026-08-25 10:05",
+    "detail": "파괴신 계산기 저장"
+  },
+  {
+    "type": "login",
+    "username": "admin",
+    "timestamp": "2026-08-25 10:11",
+    "detail": ""
+  },
+  {
+    "type": "login",
+    "username": "admin",
+    "timestamp": "2026-08-25 10:13",
+    "detail": ""
+  },
+  {
+    "type": "login",
+    "username": "admin",
+    "timestamp": "2026-08-25 10:14",
+    "detail": ""
+  },
+  {
+    "type": "login",
+    "username": "admin",
+    "timestamp": "2026-08-25 10:14",
+    "detail": ""
+  },
+  {
+    "type": "login",
+    "username": "admin",
+    "timestamp": "2026-08-25 10:18",
+    "detail": ""
+  },
+  {
+    "type": "login",
+    "username": "admin",
+    "timestamp": "2026-08-25 10:29",
+    "detail": ""
+  },
+  {
+    "type": "login",
+    "username": "admin",
+    "timestamp": "2026-08-25 10:29",
+    "detail": ""
+  },
+  {
+    "type": "login",
+    "username": "admin",
+    "timestamp": "2026-08-25 10:31",
+    "detail": ""
+  },
+  {
+    "type": "login",
+    "username": "빤치",
+    "timestamp": "2026-08-25 10:31",
+    "detail": ""
+  },
+  {
+    "type": "save",
+    "username": "빤치",
+    "timestamp": "2026-08-25 10:31",
+    "detail": "파괴신 계산기 저장"
+  },
+  {
+    "type": "login",
+    "username": "admin",
+    "timestamp": "2026-08-25 10:31",
+    "detail": ""
+  },
+  {
+    "type": "login",
+    "username": "admin",
+    "timestamp": "2026-08-25 10:36",
+    "detail": ""
+  },
+  {
+    "type": "login",
+    "username": "admin",
+    "timestamp": "2026-08-25 10:38",
+    "detail": ""
+  },
+  {
+    "type": "login",
+    "username": "admin",
+    "timestamp": "2026-08-25 10:39",
+    "detail": ""
+  },
+  {
+    "type": "login",
+    "username": "admin",
+    "timestamp": "2026-08-25 10:45",
+    "detail": ""
+  },
+  {
+    "type": "login",
+    "username": "admin",
+    "timestamp": "2026-08-25 10:45",
+    "detail": ""
+  },
+  {
+    "type": "login",
+    "username": "admin",
+    "timestamp": "2026-08-25 10:45",
+    "detail": ""
+  },
+  {
+    "type": "save",
+    "username": "admin",
+    "timestamp": "2026-08-25 10:45",
+    "detail": "파괴신 계산기 저장"
+  },
+  {
+    "type": "login",
+    "username": "admin",
+    "timestamp": "2026-08-25 10:45",
+    "detail": ""
+  },
+  {
+    "type": "save",
+    "username": "admin",
+    "timestamp": "2026-08-25 10:46",
+    "detail": "파괴신 계산기 저장"
+  },
+  {
+    "type": "save",
+    "username": "admin",
+    "timestamp": "2026-08-25 10:46",
+    "detail": "파괴신 계산기 저장"
+  },
+  {
+    "type": "save",
+    "username": "admin",
+    "timestamp": "2026-08-25 10:46",
+    "detail": "파괴신 계산기 저장"
+  },
+  {
+    "type": "login",
+    "username": "admin",
+    "timestamp": "2026-08-25 10:49",
+    "detail": ""
+  },
+  {
+    "type": "save",
+    "username": "admin",
+    "timestamp": "2026-08-25 10:49",
+    "detail": "파괴신 계산기 저장"
+  },
+  {
+    "type": "login",
+    "username": "admin",
+    "timestamp": "2026-08-25 10:51",
+    "detail": ""
+  },
+  {
+    "type": "save",
+    "username": "admin",
+    "timestamp": "2026-08-25 10:51",
+    "detail": "파괴신 계산기 저장"
+  },
+  {
+    "type": "save",
+    "username": "admin",
+    "timestamp": "2026-08-25 10:52",
+    "detail": "파괴신 계산기 저장"
+  },
+  {
+    "type": "save",
+    "username": "admin",
+    "timestamp": "2026-08-25 10:53",
+    "detail": "파괴신 계산기 저장"
+  },
+  {
+    "type": "login",
+    "username": "admin",
+    "timestamp": "2026-08-25 10:54",
+    "detail": ""
+  },
+  {
+    "type": "login",
+    "username": "admin",
+    "timestamp": "2026-08-25 10:54",
+    "detail": ""
+  },
+  {
+    "type": "login",
+    "username": "admin",
+    "timestamp": "2026-08-25 10:54",
+    "detail": ""
+  },
+  {
+    "type": "save",
+    "username": "admin",
+    "timestamp": "2026-08-25 10:54",
+    "detail": "파괴신 계산기 저장"
   }
 ]

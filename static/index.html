@@ -100,6 +100,29 @@
   .tab:hover { color: var(--text); }
   .tab.active { color: var(--gold); border-bottom: 2px solid var(--gold); }
 
+  .tab-dropdown { display: inline-block; position: relative; }
+  .dropdown-menu {
+    display: none;
+    position: fixed;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    min-width: 140px;
+    z-index: 100;
+    box-shadow: 0 8px 24px rgba(0,0,0,.4);
+    overflow: hidden;
+  }
+  .dropdown-menu.open { display: block; }
+  .dropdown-item {
+    padding: 11px 16px;
+    font-size: 13.5px;
+    color: var(--text-dim);
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .dropdown-item:hover { background: var(--panel-hover); color: var(--gold); }
+  .dropdown-item.active { color: var(--gold); }
+
   main { max-width: 1080px; margin: 0 auto; padding: 24px 28px; }
   .view { display: none; }
   .view.active { display: block; }
@@ -358,10 +381,16 @@
     <div class="tab" data-view="raid-파괴신">파괴신</div>
     <div class="tab" data-view="calculator">파괴신 계산기</div>
     <div class="tab" data-view="raid-돌발레이드">돌발레이드</div>
-    <div class="tab" id="memoTab" data-view="memo" style="display:none;">메모장</div>
-    <div class="tab" id="adminTab" data-view="admin" style="display:none;">사용자 관리</div>
     <div class="tab" data-view="corrections">정정 내역</div>
-    <div class="tab" id="logTab" data-view="activitylog" style="display:none;">활동 로그</div>
+    <div class="tab-dropdown" id="adminDropdown" style="display:none;">
+      <div class="tab" id="adminDropdownToggle">관리자 전용 ▾</div>
+      <div class="dropdown-menu" id="adminDropdownMenu">
+        <div class="dropdown-item" data-view="memo">메모장</div>
+        <div class="dropdown-item" data-view="admin">사용자 관리</div>
+        <div class="dropdown-item" data-view="activitylog">활동 로그</div>
+        <div class="dropdown-item" data-view="calcdata">계정별 스탯</div>
+      </div>
+    </div>
   </div>
 
   <main>
@@ -474,6 +503,12 @@
 
       <h3 class="admin-section-title" style="margin-top:24px;">전체 회원 목록 <span id="allUsersCount" style="font-size:13px; color:var(--text-dim); font-weight:normal;"></span></h3>
       <div id="allUsersList"></div>
+    </section>
+
+    <!-- ---------- 계정별 스탯 탭 (admin 전용) ---------- -->
+    <section id="view-calcdata" class="view">
+      <h3 class="admin-section-title">계정별 스탯 정보</h3>
+      <div id="calcDataView"></div>
     </section>
 
     <!-- ---------- 활동 로그 탭 (admin 전용) ---------- -->
@@ -659,36 +694,76 @@ function initApp() {
 
   const currentUsername = localStorage.getItem('sena_bot_username');
   if (currentUsername === 'admin') {
-    document.getElementById('adminTab').style.display = 'block';
-    document.getElementById('memoTab').style.display = 'block';
-    document.getElementById('logTab').style.display = 'block';
+    document.getElementById('adminDropdown').style.display = 'block';
   }
 
   const tabs = document.querySelectorAll('.tab');
   const views = document.querySelectorAll('.view');
   tabs.forEach(tab => {
     tab.addEventListener('click', () => {
+      if (tab.id === 'adminDropdownToggle') return;   // 드롭다운 토글 버튼은 별도 처리
       tabs.forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.dropdown-item').forEach(i => i.classList.remove('active'));
       views.forEach(v => v.classList.remove('active'));
       tab.classList.add('active');
       document.getElementById('view-' + tab.dataset.view).classList.add('active');
-      
+
       if (tab.dataset.view === 'guide') loadGuide('guide');
       if (tab.dataset.view === 'edit') loadGuide('edit');
       if (tab.dataset.view === 'defense') loadDefense(); // 방어 가이드 호출
       if (tab.dataset.view === 'corrections') loadCorrections();
-      if (tab.dataset.view === 'memo') loadMemo();
       if (tab.dataset.view === 'raid-강림') loadRaidList('강림');
       if (tab.dataset.view === 'raid-돌발레이드') loadRaidList('돌발레이드');
       if (tab.dataset.view === 'raid-파괴신') loadRaidSingle('파괴신');
-      if (tab.dataset.view === 'admin') loadAdminData();
-      if (tab.dataset.view === 'activitylog') loadActivityLogData();   
       if (tab.dataset.view === 'notices') loadNotices();
       if (tab.dataset.view === 'calculator') {
         const { username, password } = getAuth();
         document.getElementById('calculatorFrame').src =
           `/calculator?username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`;
       }
+    });
+  });
+
+  // 관리자 전용 드롭다운: 토글 버튼 클릭 시 열고 닫기
+  const dropdownToggle = document.getElementById('adminDropdownToggle');
+  const dropdownMenu = document.getElementById('adminDropdownMenu');
+  if (dropdownToggle) {
+    dropdownToggle.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isOpen = dropdownMenu.classList.contains('open');
+      if (isOpen) {
+        dropdownMenu.classList.remove('open');
+      } else {
+        // 버튼의 실제 화면 위치를 계산해서, 그 바로 아래에 메뉴가 뜨도록 좌표 지정
+        const rect = dropdownToggle.getBoundingClientRect();
+        dropdownMenu.style.top = rect.bottom + 'px';
+        dropdownMenu.style.left = rect.left + 'px';
+        dropdownMenu.classList.add('open');
+      }
+    });
+    document.addEventListener('click', () => {
+      dropdownMenu.classList.remove('open');
+    });
+  }
+
+  // 드롭다운 항목 클릭 -> 해당 관리자 전용 뷰로 전환
+  document.querySelectorAll('.dropdown-item').forEach(item => {
+    item.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const viewName = item.dataset.view;
+
+      tabs.forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.dropdown-item').forEach(i => i.classList.remove('active'));
+      views.forEach(v => v.classList.remove('active'));
+
+      item.classList.add('active');
+      document.getElementById('view-' + viewName).classList.add('active');
+      dropdownMenu.classList.remove('open');
+
+      if (viewName === 'admin') loadAdminData();
+      if (viewName === 'memo') loadMemo();
+      if (viewName === 'activitylog') loadActivityLogData();
+      if (viewName === 'calcdata') loadCalculatorDataTab();
     });
   });
 
@@ -1420,6 +1495,113 @@ function initApp() {
     } catch (e) {
       document.getElementById('activityLogList').innerHTML = `<div class="empty-state">${e.message}</div>`;
     }
+  }
+
+  // "계정별 스탯" 탭: 회원 목록 + 각자 저장한 파괴신 계산기 데이터를 함께 불러와서 드롭다운으로 조회
+  async function loadCalculatorDataTab() {
+    const { username, password } = getAuth();
+    let allUsers = [];
+    let allCalcData = {};
+
+    try {
+      const [usersRes, calcRes] = await Promise.all([
+        fetch(`/all-users?username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`),
+        fetch(`/all-calculator-data?username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`),
+      ]);
+      allUsers = await usersRes.json();
+      allCalcData = await calcRes.json();
+    } catch (e) {
+      document.getElementById('calcDataView').innerHTML = '<div class="empty-state">데이터를 불러오지 못했습니다.</div>';
+      return;
+    }
+
+    const charOrder = ['sein', 'pi', 'hebnia', 'shao', 'biscuit'];
+    const charLabels = { hebnia: '헤브니아', pi: '파이', sein: '세인', shao: '샤오', biscuit: '비스킷' };
+    const RING_LABELS = {
+      none: '없음',
+      tobeol: '토벌',
+      gongseong: '공성',
+      chihwak: '치확',
+      yakgong: '약공',
+      hwasang: '화상',
+      chulhyeol: '출혈',
+    };
+
+    const viewEl = document.getElementById('calcDataView');
+    const usersWithData = allUsers.filter(u => allCalcData[u.username]);
+
+    if (!usersWithData.length) {
+      viewEl.innerHTML = '<div class="empty-state">저장된 계산기 데이터가 있는 계정이 없습니다.</div>';
+      return;
+    }
+
+    // 캐릭터 한 칸 안에 공격력/치확/치피/약확/피증/반지를 줄바꿈으로 나열
+    function formatCharCell(stat, rings) {
+      if (!stat || Object.keys(stat).length === 0) return '-';
+      const ringText = (rings || []).map(code => RING_LABELS[code] || code).join(', ') || '-';
+      const atk = stat.atk ?? stat.matk ?? '-';
+      return [
+        `공: ${atk}`,
+        `치확: ${stat.cc ?? '-'}`,
+        `치피: ${stat.cd ?? '-'}`,
+        `약확: ${stat.wc ?? '-'}`,
+        `피증: ${stat.amp ?? '-'}`,
+        `반지: ${ringText}`,
+      ].join('\n');
+    }
+
+    const headerCells = ['아이디', '펫잠재', '이론상 최대값']
+      .concat(charOrder.map(c => charLabels[c]))
+      .map(label => `<th>${label}</th>`)
+      .join('');
+
+    const rows = usersWithData.map(u => {
+      const data = allCalcData[u.username];
+      let cells = `<td style="color:var(--gold); font-weight:600; vertical-align:top;">${u.username}</td>`;
+      cells += `<td style="vertical-align:top;">${data.pet_potential ?? '-'}</td>`;
+      cells += `<td style="vertical-align:top;">${data.theoretical_max ? Math.round(data.theoretical_max).toLocaleString() : '-'}</td>`;
+
+      charOrder.forEach(c => {
+        const stat = (data.stats && data.stats[c]) || null;
+        const rings = (data.rings && data.rings[c]) || [];
+        cells += `<td style="white-space:pre-line; vertical-align:top;">${formatCharCell(stat, rings)}</td>`;
+      });
+
+      return `<tr>${cells}</tr>`;
+    }).join('');
+
+    viewEl.innerHTML = `
+      <div style="overflow-x:auto;">
+        <table class="data" style="width:100%; border-collapse:collapse; font-size:12.5px;">
+          <thead>
+            <tr style="border-bottom:1px solid var(--border);">${headerCells}</tr>
+          </thead>
+          <tbody>
+            ${rows}
+          </tbody>
+        </table>
+      </div>
+    `;
+
+    viewEl.querySelectorAll('td, th').forEach(cell => {
+      cell.style.padding = '10px 14px';
+      cell.style.borderBottom = '1px solid var(--border)';
+      cell.style.borderRight = '1px solid var(--border)';
+      if (cell.tagName === 'TH') {
+        cell.style.textAlign = 'center';
+        cell.style.color = 'var(--gold)';
+      }
+    });
+
+    // 맨 마지막 열은 오른쪽 세로줄 제거 (표 바깥쪽 테두리처럼 안 보이게)
+    viewEl.querySelectorAll('tr').forEach(row => {
+      const cells = row.querySelectorAll('td, th');
+      if (cells.length) cells[cells.length - 1].style.borderRight = 'none';
+
+      if (cells[0]) { cells[0].style.textAlign = 'center'; cells[0].style.verticalAlign = 'middle'; }
+      if (cells[1]) { cells[1].style.textAlign = 'center'; cells[1].style.verticalAlign = 'middle'; }
+      if (cells[2]) { cells[2].style.textAlign = 'center'; cells[2].style.verticalAlign = 'middle'; } 
+    });
   }
 
   function renderPendingUsers(usernames, adminUsername, adminPassword) {
