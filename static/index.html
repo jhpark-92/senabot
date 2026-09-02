@@ -325,6 +325,10 @@
     .tab { padding: 10px 9px; font-size: 12.5px; }
     .bubble { max-width: 92%; }
   }
+  
+  @media (max-width: 768px) {
+    #noticeContentInput { min-height: 160px; }
+  }
 </style>
 </head>
 <body>
@@ -536,7 +540,7 @@
           <input type="text" id="noticeTitleInput" />
           
           <label>내용</label>
-          <textarea id="noticeContentInput" rows="4"></textarea>
+          <textarea id="noticeContentInput" rows="4" style="min-height: 480px;"></textarea>
           
           <label style="display:flex; align-items:center; gap:8px;">
             첨부 파일 (이미지 등)
