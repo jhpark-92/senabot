@@ -55,6 +55,17 @@ equipment(장비 세팅), notes(메모/스킬순서/배치/TIP)가 모두 들어
 절대 counter_decks 목록만 나열하고 끝내지 마세요. 항상 "조합 이름 → 배치/펫/스킬순서 요약 → 장비 상세 →
 기타 TIP" 순서로, 실전에서 바로 쓸 수 있는 수준까지 답변하는 것이 목표입니다.
 
+[역방향 질문 처리]
+사용자가 "OO 조합/덱으로 뭘 잡을 수 있어?", "OO 써서 이길 수 있는 방어덱 알려줘"처럼
+공격 조합을 기준으로 상대 가능한 방어덱을 물어보면:
+1. 이때도 캐릭터 축약어 사전과 이름 해석 규칙(오공/오르카/오목 구분 등)을 동일하게 적용해서,
+   사용자가 어떤 표기로 말하든("아리스 플루", "플루아", "아리스+플루" 등) 같은 조합으로 이해하세요.
+2. get_guide로 가져온 전체 데이터에서, 각 방어덱의 counter_decks 목록을 전부 훑어보세요.
+3. 사용자가 말한 조합과 일치하거나, 그 조합에 들어간 캐릭터들을 모두 포함하는 조합이 있는
+   방어덱들을 찾아서 목록으로 답변하세요.
+4. 각 방어덱마다 해당 조합이 몇 순위 카운터인지(priority_note 참고), 장비 세팅(equipment)도 함께 안내하세요.
+5. 일치하는 방어덱이 없으면 "해당 조합으로 카운터 가능한 방어덱을 찾지 못했습니다"라고 솔직히 답하세요.
+
 [캐릭터 축약어 사전]
 덱 이름은 아래 캐릭터 이름 축약어의 조합입니다:
 {json.dumps(abbreviations, ensure_ascii=False, indent=2)}
@@ -71,9 +82,7 @@ equipment(장비 세팅), notes(메모/스킬순서/배치/TIP)가 모두 들어
 사용자가 캐릭터 이름을 순서 상관없이 나열하거나(예: "선란 델론즈 오르카"), 축약어로 조합해서 말하면(예: "선델오") 같은 덱을 가리키는 것으로 이해하세요.
 그래도 어떤 덱인지 애매하면, 짧고 의미 없는 답변("아", "네") 대신 "혹시 OO 조합을 말씀하신 건가요?"처럼 되물어보세요.
 
-[정정 처리]
-사용자가 "이거 틀렸어", "사실은 ~야" 처럼 기존 내용을 정정하려고 하면,
-add_correction 도구를 사용해 정정 내용을 저장하고, 저장했다고 알려주세요."""
+"""
 
 async def ask(user_message: str) -> str:
     async with mcp_client:
@@ -82,20 +91,12 @@ async def ask(user_message: str) -> str:
             result = await mcp_client.call_tool("get_guide", {})
             return result.data
 
-        async def add_correction(wrong_info: str, correct_info: str) -> dict:
-            """가이드 내용 중 잘못된 정보를 정정합니다. 사용자가 특정 내용이 틀렸다고 지적하면 이 도구를 사용하세요."""
-            result = await mcp_client.call_tool(
-                "add_correction",
-                {"wrong_info": wrong_info, "correct_info": correct_info}
-            )
-            return result.data
-
         response = await gemini_client.aio.models.generate_content(
             model="gemini-3.6-flash",
             contents=user_message,
             config=types.GenerateContentConfig(
                 system_instruction=SYSTEM_INSTRUCTION,
-                tools=[get_guide, add_correction],
+                tools=[get_guide],
             ),
         )
         return response.text

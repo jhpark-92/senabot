@@ -17,15 +17,5 @@ def get_guide() -> dict:
     return response.json()
 
 
-@mcp.tool()
-def add_correction(wrong_info: str, correct_info: str) -> dict:
-    """가이드 내용 중 잘못된 정보를 정정합니다. 사용자가 특정 내용이 틀렸다고 지적하면 이 도구를 사용하세요."""
-    response = requests.post(
-        f"{FASTAPI_BASE_URL}/corrections",
-        json={"wrong_info": wrong_info, "correct_info": correct_info}
-    )
-    return response.json()
-
-
 if __name__ == "__main__":
     mcp.run()
