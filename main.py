@@ -776,6 +776,39 @@ async def create_notice(
     add_activity_log("save", username, f"공지 등록: {title}")
     return {"message": "공지사항이 등록되었습니다."}
 
+@app.put("/notices/{notice_id}")
+async def update_notice(
+    notice_id: int,
+    title: str = Form(...),
+    content: str = Form(...),
+    username: str = Form(...),
+    password: str = Form(...),
+    file: UploadFile | None = File(None),
+):
+    """공지사항 수정. admin만 가능. 파일을 새로 첨부하면 기존 첨부파일을 교체."""
+    check_admin_login(username, password)
+
+    notices = load_notices()
+    for n in notices:
+        if n["id"] == notice_id:
+            n["title"] = title
+            n["content"] = content
+            n["timestamp"] = now_kst()
+
+            if file and file.filename:
+                ext = file.filename.split('.')[-1]
+                filename = f"notice_{secrets.token_hex(4)}.{ext}"
+                file_path = path(os.path.join("uploads", filename))
+                with open(file_path, "wb") as f:
+                    f.write(await file.read())
+                n["file_url"] = f"/uploads/{filename}"
+
+            save_notices(notices)
+            add_activity_log("save", username, f"공지 수정: {title}")
+            return {"message": "공지사항이 수정되었습니다."}
+
+    raise HTTPException(status_code=404, detail="존재하지 않는 공지사항입니다.")
+
 @app.delete("/notices/{notice_id}")
 def delete_notice(notice_id: int, body: NoticeDelete):
     """공지사항 삭제. admin만 가능."""

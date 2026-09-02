@@ -1795,6 +1795,10 @@ function initApp() {
     document.getElementById('noticeFileInput').value = '';
     document.getElementById('pasteIndicator').style.display = 'none';
     document.getElementById('noticeStatus').textContent = '';
+
+    const createBtn = document.getElementById('createNoticeBtn');
+    createBtn.textContent = '등록';
+    delete createBtn.dataset.editingId;   // 추가
   });
 
   async function loadNotices() {
@@ -1836,7 +1840,12 @@ function initApp() {
         <div class="notice-body">
           <div style="white-space: pre-wrap;">${n.content}</div>
           ${fileHTML}
-          ${username === 'admin' ? `<button class="save-btn danger-save-btn" style="margin-top:14px; padding: 6px 14px; font-size:12px;" data-id="${n.id}">삭제</button>` : ''}
+          ${username === 'admin' ? `
+            <div class="btn-row" style="margin-top:14px;">
+              <button class="save-btn" style="padding:6px 14px; font-size:12px; margin-top:0;" data-edit-id="${n.id}">수정</button>
+              <button class="save-btn danger-save-btn" style="padding:6px 14px; font-size:12px; margin-top:0;" data-id="${n.id}">삭제</button>
+            </div>
+          ` : ''}
         </div>
       </div>
     `}).join('');
@@ -1855,52 +1864,74 @@ function initApp() {
         });
       });
     }
+
+      // "수정" 버튼: 클릭하면 작성 폼에 기존 내용을 채워넣고 수정 모드로 전환
+    listEl.querySelectorAll('[data-edit-id]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const notice = notices.find(n => n.id == btn.dataset.editId);
+        if (!notice) return;
+
+        document.getElementById('noticeTitleInput').value = notice.title;
+        document.getElementById('noticeContentInput').value = notice.content;
+
+        const createBtn = document.getElementById('createNoticeBtn');
+        createBtn.textContent = '수정 완료';
+        createBtn.dataset.editingId = notice.id;
+
+        // 글쓰기 폼 열기 (기존 showNoticeWriteBtn 클릭과 동일한 화면 전환)
+        document.getElementById('noticesList').style.display = 'none';
+        document.getElementById('showNoticeWriteBtn').style.display = 'none';
+        document.getElementById('noticeWriteBox').style.display = 'block';
+      });
+    });
   }
 
   document.getElementById('createNoticeBtn').addEventListener('click', async () => {
+    const btn = document.getElementById('createNoticeBtn');
     const status = document.getElementById('noticeStatus');
     const title = document.getElementById('noticeTitleInput').value.trim();
     const content = document.getElementById('noticeContentInput').value.trim();
     const fileInput = document.getElementById('noticeFileInput');
+    const editingId = btn.dataset.editingId;   // 있으면 수정 모드
 
     if (!title || !content) {
       status.textContent = '제목과 내용을 입력해주세요.';
       status.className = 'save-status err';
       return;
     }
-    
-    const { username, password } = getAuth();
 
+    const { username, password } = getAuth();
     const formData = new FormData();
     formData.append('title', title);
     formData.append('content', content);
     formData.append('username', username);
     formData.append('password', password);
-
     if (fileInput.files.length > 0) {
       formData.append('file', fileInput.files[0]);
     }
 
     try {
-      const res = await fetch('/notices', {
-        method: 'POST',
+      const res = await fetch(editingId ? '/notices/' + editingId : '/notices', {
+        method: editingId ? 'PUT' : 'POST',
         body: formData
       });
       if (!res.ok) throw new Error();
-      
+
       document.getElementById('noticeTitleInput').value = '';
       document.getElementById('noticeContentInput').value = '';
       fileInput.value = '';
       document.getElementById('pasteIndicator').style.display = 'none';
       status.textContent = '';
-      
+
+      btn.textContent = '등록';
+      delete btn.dataset.editingId;
+
       document.getElementById('noticeWriteBox').style.display = 'none';
       document.getElementById('noticesList').style.display = 'block';
       document.getElementById('showNoticeWriteBtn').style.display = 'inline-block';
-
       loadNotices();
     } catch (e) {
-      status.textContent = '등록에 실패했습니다.';
+      status.textContent = editingId ? '수정에 실패했습니다.' : '등록에 실패했습니다.';
       status.className = 'save-status err';
     }
   });
