@@ -174,6 +174,11 @@
   }
   .edit-form input:focus, .edit-form textarea:focus, .plain-textarea:focus { outline: none; border-color: var(--gold-dim); }
   .edit-form .field-hint { color: var(--text-dim); font-size: 11.5px; margin-top: 4px; }
+  .guide-images { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+  .guide-images img { max-width: 100%; max-height: 400px; border-radius: 4px; cursor: zoom-in; }
+  .img-thumb { position: relative; }
+  .img-thumb img { width: 96px; height: 96px; object-fit: cover; border-radius: 4px; display: block; }
+  .img-thumb button { position: absolute; top: 2px; right: 2px; background: rgba(0,0,0,.7); color: #fff; border: none; border-radius: 50%; width: 22px; height: 22px; cursor: pointer; line-height: 1; }
   .save-btn {
     background: var(--gold); color: #1a1a1a; border: none; border-radius: 5px;
     padding: 10px 24px; font-weight: 600; font-size: 13.5px; cursor: pointer; margin-top: 18px;
@@ -894,7 +899,64 @@ function initApp() {
       <div class="detail-field"><div class="detail-field-label">우선순위</div><div class="detail-field-value">${d.priority_note || '-'}</div></div>
       <div class="detail-field"><div class="detail-field-label">장비 세팅</div><div class="detail-field-value">${d.equipment || '-'}</div></div>
       <div class="detail-field"><div class="detail-field-label">메모</div><div class="detail-field-value">${d.notes || '-'}</div></div>
+      ${(d.images && d.images.length) ? `<div class="detail-field"><div class="detail-field-label">사진</div><div class="guide-images">${d.images.map(u => `<a href="${u}" target="_blank"><img src="${u}" /></a>`).join('')}</div></div>` : ''}
     `;
+  }
+
+  /* 공격 가이드 수정/추가 폼의 사진 첨부 (선택 즉시 업로드 → URL 목록을 저장 시 함께 전송) */
+  let editImages = [];
+  const IMAGE_FIELD_HTML = `
+        <label>사진</label>
+        <input type="file" id="f-images" accept="image/*" multiple />
+        <div class="field-hint">jpg, png, gif, webp · 장당 10MB 이하</div>
+        <div class="guide-images" id="f-image-list"></div>`;
+
+  function renderImageEditor() {
+    const list = document.getElementById('f-image-list');
+    list.innerHTML = editImages.map((u, i) =>
+      `<div class="img-thumb"><img src="${u}" /><button type="button" data-idx="${i}" title="삭제">×</button></div>`
+    ).join('');
+    list.querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
+      editImages.splice(Number(b.dataset.idx), 1);
+      renderImageEditor();
+    }));
+  }
+
+  function setupImageEditor(initial) {
+    editImages = [...(initial || [])];
+    renderImageEditor();
+    document.getElementById('f-images').addEventListener('change', async e => {
+      const status = document.getElementById('saveStatus');
+      const { username, password } = getAuth();
+      if (!username || !password) {
+        status.textContent = '로그인이 필요합니다.';
+        status.className = 'save-status err';
+        e.target.value = '';
+        return;
+      }
+      status.textContent = '사진 업로드 중...';
+      status.className = 'save-status';
+      try {
+        for (const file of e.target.files) {
+          const fd = new FormData();
+          fd.append('username', username);
+          fd.append('password', password);
+          fd.append('file', file);
+          const res = await fetch('/guide-image', { method: 'POST', body: fd });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.detail);
+          editImages.push(data.url);
+          renderImageEditor();
+        }
+        status.textContent = '사진이 첨부되었습니다. 저장/추가 버튼을 눌러야 반영됩니다.';
+        status.className = 'save-status ok';
+      } catch (err) {
+        status.textContent = err.message || '사진 업로드에 실패했습니다.';
+        status.className = 'save-status err';
+      } finally {
+        e.target.value = '';
+      }
+    });
   }
 
   function renderEditForm(deckName) {
@@ -914,6 +976,7 @@ function initApp() {
         <textarea id="f-equipment" rows="2">${d.equipment || ''}</textarea>
         <label>메모</label>
         <textarea id="f-notes" rows="4">${d.notes || ''}</textarea>
+        ${IMAGE_FIELD_HTML}
         <div class="btn-row">
           <button class="save-btn" id="saveDeckBtn">저장</button>
           <button class="save-btn danger-save-btn" id="deleteDeckBtn">삭제</button>
@@ -921,6 +984,7 @@ function initApp() {
         <div class="save-status" id="saveStatus"></div>
       </div>
     `;
+    setupImageEditor(d.images);
     document.getElementById('saveDeckBtn').addEventListener('click', () => saveDeck(deckName));
     document.getElementById('deleteDeckBtn').addEventListener('click', () => deleteDeck(deckName));
   }
@@ -944,6 +1008,7 @@ function initApp() {
       priority_note: document.getElementById('f-priority').value,
       equipment: document.getElementById('f-equipment').value,
       notes: document.getElementById('f-notes').value,
+      images: [...editImages],
       username: username,
       password: password,
     };
@@ -1009,10 +1074,12 @@ function initApp() {
         <textarea id="f-equipment" rows="2"></textarea>
         <label>메모</label>
         <textarea id="f-notes" rows="4"></textarea>
+        ${IMAGE_FIELD_HTML}
         <button class="save-btn" id="createDeckBtn">추가</button>
         <div class="save-status" id="saveStatus"></div>
       </div>
     `;
+    setupImageEditor([]);
     document.getElementById('createDeckBtn').addEventListener('click', createDeck);
   }
 
@@ -1038,6 +1105,7 @@ function initApp() {
       priority_note: document.getElementById('f-priority').value,
       equipment: document.getElementById('f-equipment').value,
       notes: document.getElementById('f-notes').value,
+      images: [...editImages],
       username: username,
       password: password,
     };
@@ -1055,6 +1123,7 @@ function initApp() {
         priority_note: payload.priority_note,
         equipment: payload.equipment,
         notes: payload.notes,
+        images: payload.images,
       };
       renderDeckList('edit');
       status.textContent = '추가되었습니다.';
@@ -1286,7 +1355,7 @@ function initApp() {
         memo: '메모',
         raid: '레이드',
       };
-      const fieldLabels = { counter_decks: '카운터 조합', priority_note: '우선순위', equipment: '장비 세팅', notes: '메모' };
+      const fieldLabels = { counter_decks: '카운터 조합', priority_note: '우선순위', equipment: '장비 세팅', notes: '메모', images: '사진' };
 
       list.innerHTML = data.map(h => {
         const badge = `<span class="type-badge ${h.type}">${typeLabels[h.type] || h.type}</span>`;
@@ -1296,8 +1365,8 @@ function initApp() {
           const changedFields = [];
           for (const key in fieldLabels) {
             // defense 에는 counter_decks 가 없으므로 무시됨
-            const beforeVal = JSON.stringify((h.before || {})[key] || (key === 'counter_decks' ? [] : ''));
-            const afterVal = JSON.stringify((h.after || {})[key] || (key === 'counter_decks' ? [] : ''));
+            const beforeVal = JSON.stringify((h.before || {})[key] || (key === 'counter_decks' || key === 'images' ? [] : ''));
+            const afterVal = JSON.stringify((h.after || {})[key] || (key === 'counter_decks' || key === 'images' ? [] : ''));
             if (beforeVal !== afterVal) changedFields.push(fieldLabels[key]);
           }
           detailLine = `변경된 항목: <span class="changed">${changedFields.join(', ') || '없음'}</span>`;

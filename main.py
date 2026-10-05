@@ -342,6 +342,7 @@ class DeckUpdate(BaseModel):
     priority_note: str = ""
     equipment: str = ""
     notes: str = ""
+    images: list[str] = []
     username: str
     password: str
 
@@ -352,6 +353,7 @@ class DeckCreate(BaseModel):
     priority_note: str = ""
     equipment: str = ""
     notes: str = ""
+    images: list[str] = []
     username: str
     password: str
 
@@ -441,6 +443,7 @@ def update_deck(deck_name: str, update: DeckUpdate):
         "priority_note": update.priority_note,
         "equipment": update.equipment,
         "notes": update.notes,
+        "images": update.images,
     }
     guide_data[deck_name] = after
     save_guide_data(guide_data)
@@ -462,6 +465,7 @@ def create_deck(body: DeckCreate):
         "priority_note": body.priority_note,
         "equipment": body.equipment,
         "notes": body.notes,
+        "images": body.images,
     }
     guide_data[body.deck_name] = after
     save_guide_data(guide_data)
@@ -469,6 +473,28 @@ def create_deck(body: DeckCreate):
     add_history_entry("deck_create", body.deck_name, body.username, None, after)
     add_activity_log("save", body.username, f"공격 덱 추가: {body.deck_name}")
     return {"message": f"{body.deck_name} 덱이 추가되었습니다."}
+
+ALLOWED_IMAGE_EXTS = {"jpg", "jpeg", "png", "gif", "webp"}
+MAX_IMAGE_BYTES = 10 * 1024 * 1024
+
+@app.post("/guide-image")
+async def upload_guide_image(
+    username: str = Form(...),
+    password: str = Form(...),
+    file: UploadFile = File(...),
+):
+    """공격 가이드에 첨부할 이미지 업로드. 저장된 URL을 반환 (덱 저장 시 images에 포함)."""
+    check_login(username, password)
+    ext = (file.filename or "").rsplit(".", 1)[-1].lower()
+    if ext not in ALLOWED_IMAGE_EXTS:
+        raise HTTPException(status_code=400, detail="이미지 파일(jpg, png, gif, webp)만 업로드할 수 있습니다.")
+    data = await file.read()
+    if len(data) > MAX_IMAGE_BYTES:
+        raise HTTPException(status_code=400, detail="이미지는 10MB 이하만 업로드할 수 있습니다.")
+    filename = f"guide_{secrets.token_hex(8)}.{ext}"
+    with open(path(os.path.join("uploads", filename)), "wb") as f:
+        f.write(data)
+    return {"url": f"/uploads/{filename}"}
 
 @app.delete("/guide/{deck_name}")
 def delete_deck(deck_name: str, body: DeckDelete):
