@@ -480,6 +480,12 @@
     <!-- ---------- 파괴신 탭 (단일 공략 페이지, 목록 없음) ---------- -->
     <section id="view-raid-파괴신" class="view">
       <textarea id="raidSingleTextarea-파괴신" class="full-textarea" placeholder="파괴신 공략 내용을 작성하세요"></textarea>
+      <div class="edit-form">
+        <label>사진</label>
+        <input type="file" id="raidSingleImages-파괴신" accept="image/*" multiple />
+        <div class="field-hint">jpg, png, gif, webp · 장당 10MB 이하 · 사진을 누르면 원본이 열립니다</div>
+        <div class="guide-images" id="raidSingleImageList-파괴신"></div>
+      </div>
       <div class="footer-row">
         <div id="raidSingleStatus-파괴신" style="font-size:12.5px;"></div>
         <button class="save-btn" id="raidSingleSaveBtn-파괴신" style="margin-top:0;">저장</button>
@@ -553,6 +559,11 @@
           </label>
           <input type="file" id="noticeFileInput" accept="image/*,.pdf,.txt,.zip" />
           <div id="pasteIndicator" class="paste-indicator">✅ 클립보드 이미지가 첨부되었습니다.</div>
+
+          <label>사진 (여러 장)</label>
+          <input type="file" id="noticeImagesInput" accept="image/*" multiple />
+          <div class="field-hint">jpg, png, gif, webp · 장당 10MB 이하</div>
+          <div class="guide-images" id="noticeImageList"></div>
           
           <div class="btn-row" style="margin-top:18px;">
             <button class="save-btn" id="createNoticeBtn" style="margin-top:0;">등록</button>
@@ -688,6 +699,65 @@ function getAuth() {
   return {
     username: localStorage.getItem('sena_bot_username'),
     password: localStorage.getItem('sena_bot_userpw'),
+  };
+}
+
+/* 사진 첨부 공통 (선택/붙여넣기 즉시 업로드 → URL 목록을 저장 시 함께 전송)
+   공격 가이드 · 공지사항 · 파괴신에서 사용 */
+const IMAGE_FIELD_HTML = `
+      <label>사진</label>
+      <input type="file" id="f-images" accept="image/*" multiple />
+      <div class="field-hint">jpg, png, gif, webp · 장당 10MB 이하</div>
+      <div class="guide-images" id="f-image-list"></div>`;
+
+function createImageEditor(inputEl, listEl, statusEl, initial) {
+  let images = [...(initial || [])];
+  const setStatus = (text, kind) => {
+    statusEl.textContent = text;
+    statusEl.className = 'save-status' + (kind ? ' ' + kind : '');
+  };
+  const render = () => {
+    listEl.innerHTML = images.map((u, i) =>
+      `<div class="img-thumb"><a href="${u}" target="_blank"><img src="${u}" /></a><button type="button" data-idx="${i}" title="삭제">×</button></div>`
+    ).join('');
+    listEl.querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
+      images.splice(Number(b.dataset.idx), 1);
+      render();
+    }));
+  };
+  const addFiles = async files => {
+    const { username, password } = getAuth();
+    if (!username || !password) {
+      setStatus('로그인이 필요합니다.', 'err');
+      return;
+    }
+    setStatus('사진 업로드 중...');
+    try {
+      for (const file of files) {
+        const fd = new FormData();
+        fd.append('username', username);
+        fd.append('password', password);
+        fd.append('file', file);
+        const res = await fetch('/guide-image', { method: 'POST', body: fd });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail);
+        images.push(data.url);
+        render();
+      }
+      setStatus('사진이 첨부되었습니다. 저장 버튼을 눌러야 반영됩니다.', 'ok');
+    } catch (err) {
+      setStatus(err.message || '사진 업로드에 실패했습니다.', 'err');
+    }
+  };
+  inputEl.addEventListener('change', async e => {
+    await addFiles([...e.target.files]);
+    e.target.value = '';
+  });
+  render();
+  return {
+    get images() { return [...images]; },
+    set(list) { images = [...(list || [])]; render(); },
+    addFiles,
   };
 }
 
@@ -903,60 +973,15 @@ function initApp() {
     `;
   }
 
-  /* 공격 가이드 수정/추가 폼의 사진 첨부 (선택 즉시 업로드 → URL 목록을 저장 시 함께 전송) */
-  let editImages = [];
-  const IMAGE_FIELD_HTML = `
-        <label>사진</label>
-        <input type="file" id="f-images" accept="image/*" multiple />
-        <div class="field-hint">jpg, png, gif, webp · 장당 10MB 이하</div>
-        <div class="guide-images" id="f-image-list"></div>`;
-
-  function renderImageEditor() {
-    const list = document.getElementById('f-image-list');
-    list.innerHTML = editImages.map((u, i) =>
-      `<div class="img-thumb"><img src="${u}" /><button type="button" data-idx="${i}" title="삭제">×</button></div>`
-    ).join('');
-    list.querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
-      editImages.splice(Number(b.dataset.idx), 1);
-      renderImageEditor();
-    }));
-  }
-
+  /* 공격 가이드 수정/추가 폼용 */
+  let deckImageEditor = null;
   function setupImageEditor(initial) {
-    editImages = [...(initial || [])];
-    renderImageEditor();
-    document.getElementById('f-images').addEventListener('change', async e => {
-      const status = document.getElementById('saveStatus');
-      const { username, password } = getAuth();
-      if (!username || !password) {
-        status.textContent = '로그인이 필요합니다.';
-        status.className = 'save-status err';
-        e.target.value = '';
-        return;
-      }
-      status.textContent = '사진 업로드 중...';
-      status.className = 'save-status';
-      try {
-        for (const file of e.target.files) {
-          const fd = new FormData();
-          fd.append('username', username);
-          fd.append('password', password);
-          fd.append('file', file);
-          const res = await fetch('/guide-image', { method: 'POST', body: fd });
-          const data = await res.json();
-          if (!res.ok) throw new Error(data.detail);
-          editImages.push(data.url);
-          renderImageEditor();
-        }
-        status.textContent = '사진이 첨부되었습니다. 저장/추가 버튼을 눌러야 반영됩니다.';
-        status.className = 'save-status ok';
-      } catch (err) {
-        status.textContent = err.message || '사진 업로드에 실패했습니다.';
-        status.className = 'save-status err';
-      } finally {
-        e.target.value = '';
-      }
-    });
+    deckImageEditor = createImageEditor(
+      document.getElementById('f-images'),
+      document.getElementById('f-image-list'),
+      document.getElementById('saveStatus'),
+      initial
+    );
   }
 
   function renderEditForm(deckName) {
@@ -1008,7 +1033,7 @@ function initApp() {
       priority_note: document.getElementById('f-priority').value,
       equipment: document.getElementById('f-equipment').value,
       notes: document.getElementById('f-notes').value,
-      images: [...editImages],
+      images: deckImageEditor.images,
       username: username,
       password: password,
     };
@@ -1105,7 +1130,7 @@ function initApp() {
       priority_note: document.getElementById('f-priority').value,
       equipment: document.getElementById('f-equipment').value,
       notes: document.getElementById('f-notes').value,
-      images: [...editImages],
+      images: deckImageEditor.images,
       username: username,
       password: password,
     };
@@ -1504,7 +1529,17 @@ function initApp() {
     await loadRaidData();
     const textarea = document.getElementById('raidSingleTextarea-' + category);
     textarea.value = raidDataCache[category].content || '';
+    if (!raidImageEditors[category]) {
+      raidImageEditors[category] = createImageEditor(
+        document.getElementById('raidSingleImages-' + category),
+        document.getElementById('raidSingleImageList-' + category),
+        document.getElementById('raidSingleStatus-' + category),
+        []
+      );
+    }
+    raidImageEditors[category].set(raidDataCache[category].images);
   };
+  const raidImageEditors = {};
 
   document.getElementById('raidSingleSaveBtn-파괴신').addEventListener('click', async () => {
     const btn = document.getElementById('raidSingleSaveBtn-파괴신');
@@ -1518,17 +1553,19 @@ function initApp() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           content: document.getElementById('raidSingleTextarea-파괴신').value,
+          images: raidImageEditors['파괴신'].images,
           username: username,
           password: password
         })
       });
       if (!res.ok) throw new Error();
       raidDataCache['파괴신'].content = document.getElementById('raidSingleTextarea-파괴신').value;
+      raidDataCache['파괴신'].images = raidImageEditors['파괴신'].images;
       status.textContent = '저장되었습니다.';
-      status.style.color = 'var(--ok)';
+      status.className = 'save-status ok';
     } catch (e) {
       status.textContent = '저장에 실패했습니다.';
-      status.style.color = 'var(--danger)';
+      status.className = 'save-status err';
     } finally {
       btn.disabled = false;
     }
@@ -1830,19 +1867,11 @@ function initApp() {
     const writeBox = document.getElementById('noticeWriteBox');
     if (writeBox.style.display !== 'none') {
       const items = (e.clipboardData || e.originalEvent.clipboardData).items;
-      for (let item of items) {
-        if (item.type.indexOf('image') !== -1) {
-          const file = item.getAsFile();
-          
-          // DataTransfer 객체를 사용해 input type="file"에 파일을 프로그램으로 세팅[cite: 2]
-          const dataTransfer = new DataTransfer();
-          dataTransfer.items.add(file);
-          document.getElementById('noticeFileInput').files = dataTransfer.files;
-          
-          // 이미지가 첨부되었다는 알림 텍스트 표시[cite: 2]
-          document.getElementById('pasteIndicator').style.display = 'block';
-          break; // 첫 번째 이미지만 가져옴[cite: 2]
-        }
+      const files = [...items].filter(i => i.type.indexOf('image') !== -1).map(i => i.getAsFile());
+      if (files.length) {
+        // 붙여넣은 이미지는 사진 목록에 추가 (여러 번 붙여넣기 가능)
+        noticeImageEditor.addFiles(files);
+        document.getElementById('pasteIndicator').style.display = 'block';
       }
     }
   });
@@ -1851,6 +1880,13 @@ function initApp() {
   document.getElementById('noticeFileInput').addEventListener('change', () => {
     document.getElementById('pasteIndicator').style.display = 'none';
   });
+
+  const noticeImageEditor = createImageEditor(
+    document.getElementById('noticeImagesInput'),
+    document.getElementById('noticeImageList'),
+    document.getElementById('noticeStatus'),
+    []
+  );
 
   document.getElementById('showNoticeWriteBtn').addEventListener('click', () => {
     document.getElementById('noticesList').style.display = 'none';
@@ -1868,6 +1904,7 @@ function initApp() {
     document.getElementById('noticeFileInput').value = '';
     document.getElementById('pasteIndicator').style.display = 'none';
     document.getElementById('noticeStatus').textContent = '';
+    noticeImageEditor.set([]);
 
     const createBtn = document.getElementById('createNoticeBtn');
     createBtn.textContent = '등록';
@@ -1903,6 +1940,9 @@ function initApp() {
         } else {
           fileHTML = `<div style="margin-top:14px;"><a href="${n.file_url}" target="_blank" style="color:var(--gold); text-decoration:underline;">📎 첨부파일 보기/다운로드</a></div>`;
         }
+      }
+      if (n.images && n.images.length) {
+        fileHTML += `<div class="guide-images" style="margin-top:14px;">${n.images.map(u => `<a href="${u}" target="_blank"><img src="${u}" /></a>`).join('')}</div>`;
       }
       return `
       <div class="notice-list-item">
@@ -1946,6 +1986,7 @@ function initApp() {
 
         document.getElementById('noticeTitleInput').value = notice.title;
         document.getElementById('noticeContentInput').value = notice.content;
+        noticeImageEditor.set(notice.images);
 
         const createBtn = document.getElementById('createNoticeBtn');
         createBtn.textContent = '수정 완료';
@@ -1979,6 +2020,7 @@ function initApp() {
     formData.append('content', content);
     formData.append('username', username);
     formData.append('password', password);
+    formData.append('images', JSON.stringify(noticeImageEditor.images));
     if (fileInput.files.length > 0) {
       formData.append('file', fileInput.files[0]);
     }
@@ -1995,6 +2037,7 @@ function initApp() {
       fileInput.value = '';
       document.getElementById('pasteIndicator').style.display = 'none';
       status.textContent = '';
+      noticeImageEditor.set([]);
 
       btn.textContent = '등록';
       delete btn.dataset.editingId;

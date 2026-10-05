@@ -405,6 +405,7 @@ class MemoUpdate(BaseModel):
 class RaidUpdate(BaseModel):
     boss: str | None = None   # "list" 타입 카테고리일 때만 사용 (예: "태오")
     content: str
+    images: list[str] | None = None  # "single" 타입(파괴신) 사진 URL 목록. None이면 기존 사진 유지
     username: str
     password: str
 
@@ -626,6 +627,8 @@ def update_raid(category: str, update: RaidUpdate):
     if entry["type"] == "single":
         before = entry.get("content", "")
         entry["content"] = update.content
+        if update.images is not None:
+            entry["images"] = update.images
         target_label = category
         after = update.content
     else:  # "list" 타입 (보스별 관리)
@@ -761,6 +764,16 @@ class NoticeDelete(BaseModel):
     username: str
     password: str
 
+def parse_image_list(raw: str) -> list[str]:
+    """폼으로 받은 사진 URL 목록(JSON 문자열)을 파싱. 업로드 폴더 경로만 허용."""
+    try:
+        items = json.loads(raw)
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=400, detail="사진 목록 형식이 올바르지 않습니다.")
+    if not isinstance(items, list):
+        raise HTTPException(status_code=400, detail="사진 목록 형식이 올바르지 않습니다.")
+    return [u for u in items if isinstance(u, str) and u.startswith("/uploads/")]
+
 @app.get("/notices")
 def get_notices():
     """공지사항 목록을 최신순으로 반환. 인증 불필요 (누구나 조회 가능)."""
@@ -773,6 +786,7 @@ async def create_notice(
     content: str = Form(...),
     username: str = Form(...),
     password: str = Form(...),
+    images: str = Form("[]"),
     file: UploadFile | None = File(None)
 ):
     """새 공지사항 등록 및 첨부파일 처리. admin만 가능."""
@@ -794,6 +808,7 @@ async def create_notice(
         "title": title,
         "content": content,
         "file_url": file_url,
+        "images": parse_image_list(images),
         "username": username,
         "timestamp": now_kst(),
     })
@@ -809,6 +824,7 @@ async def update_notice(
     content: str = Form(...),
     username: str = Form(...),
     password: str = Form(...),
+    images: str | None = Form(None),
     file: UploadFile | None = File(None),
 ):
     """공지사항 수정. admin만 가능. 파일을 새로 첨부하면 기존 첨부파일을 교체."""
@@ -820,6 +836,8 @@ async def update_notice(
             n["title"] = title
             n["content"] = content
             n["timestamp"] = now_kst()
+            if images is not None:
+                n["images"] = parse_image_list(images)
 
             if file and file.filename:
                 ext = file.filename.split('.')[-1]
