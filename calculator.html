@@ -8,7 +8,7 @@
   :root{
     --bg:#0c0e14; --panel:#12151d; --panel2:#171b26; --line:#242938;
     --gold:#e0b26b; --gold2:#f2cf94; --text:#e7e9ee; --sub:#8992a8;
-    --hebnia:#7dd3fc; --pi:#fb923c; --sein:#c084fc; --shao:#f472b6; --biscuit:#fde047;
+    --hebnia:#7dd3fc; --ailin:#fb923c; --sein:#c084fc; --shao:#f472b6; --biscuit:#fde047;
     --good:#7fd88f; --changed:#f2cf94;
   }
   *{box-sizing:border-box;}
@@ -36,7 +36,7 @@
   .charcard{background:var(--panel);border:1px solid var(--line);border-top:3px solid var(--accent);border-radius:12px;padding:14px;}
   .charcard h3{margin:0 0 10px;font-size:14px;color:var(--accent);}
   .charcard[data-c="hebnia"]{--accent:var(--hebnia);}
-  .charcard[data-c="pi"]{--accent:var(--pi);}
+  .charcard[data-c="ailin"]{--accent:var(--ailin);}
   .charcard[data-c="sein"]{--accent:var(--sein);}
   .charcard[data-c="shao"]{--accent:var(--shao);}
   .charcard[data-c="biscuit"]{--accent:var(--biscuit);}
@@ -88,7 +88,7 @@
 <body>
 <div class="wrap">
   <header>
-    <div class="eyebrow">파괴신 · 강림 원정대 · 4턴~70턴 전체 로테이션</div>
+    <div class="eyebrow">파괴신 · 세인 빌드 ver. 만월 · 4턴~70턴 전체 로테이션</div>
     <h1>딜 계산 — 전체 턴 예측 (2라운드 딜만 계산)</h1>
     <p class="sub">캐릭터 스탯을 바꾸면 <b style="color:var(--gold2)">70턴 전체 표가 실시간으로 재계산</b>. 버프/디버프 타이밍(누가 언제 뭘 쓰는지, 지속시간 규칙)은 전부 고정이고, <b style="color:var(--gold2)">스탯 숫자만</b> 바꾸는 용도.</p>
     <!-- <p class="sub" style="color:#f0b95c;"> 헤브니아 버프공%: 상시 패시브 25% + 각성기 추가 23% (합 48%). <br/> ATK 공식: <code>(도감×(1+장비공%+초월공%+펫잠재%)+장비깡공+잠재능력+펫깡공+도감×진형%)×(1+버프공%+펫공15%)</code>. 파이 화상보너스는 스킬계수에 직접 +0.70. </p> -->
@@ -96,6 +96,11 @@
       <div style="color:var(--gold); font-weight:700; margin-bottom:6px;">사용법</div>
       <div>1. 아래 "캐릭터 스탯 입력"에서 각 캐릭터의 물공/치확/치피/약공/피증 및 반지 세팅을 입력하세요. 게임 내 캐릭터 상세 화면과 동일한 값을 넣으면 됩니다.</div>
       <div>2. 값을 바꾸면 아래 표가 자동으로 재계산됩니다. 스킬 순서와 버프 타이밍은 고정이며, 스탯 숫자만 바꾸는 용도입니다.</div>
+      <div style="margin:6px 0 6px 14px; color:var(--text);">
+        · 파티/속공: 비스킷(31) &gt; 아일린(29) &gt; 샤오(29) &gt; 세인(29) &gt; 헤브니아(25)<br/>
+        · 스킬 순서: 아일린 아래(4) - 헤브 위(8) - 샤오 아래(12) - 비스킷 아래(16) - 세인 위(20) - 아일린 아래(24) - 헤브 위(28) - 세인 위(32) - 샤오 아래(36) - 헤브 각성(40) - 세인 위(44) - 비스킷 아래(48) - 헤브 위(52) - 세인 위(56) - 샤오 아래(60) - 헤브 아래(64) - 세인 위(68)<br/>
+        · 비스킷 버프: 세인, 헤브 / 헤브 각성 버프: 세인, 헤브, 샤오
+      </div>
       <div>3. 스탯 화면을 캡처해서 이미지로 올리면(여러 장 가능) 자동으로 값을 채워줍니다. 자동 인식 후에는 값이 맞는지 한 번 확인해주세요.</div>
       <div style="margin:10px 0;">
         <img src="/static/example_stat.jpg" alt="스탯 화면 예시" style="max-width:360px; width:100%; border-radius:8px; border:1px solid var(--line); display:block;" />
@@ -124,15 +129,25 @@
     <span style="font-size:11px; color:var(--sub); flex-basis:100%; line-height:1.5;">깡공564+15%는 고정. 잠재%는 전원 공유(현재 18+15+15+15=63%).</span>
   </div>
 
+  <div id="unknownParamRow" style="display:flex; flex-wrap:wrap; align-items:center; gap:8px 12px; margin-bottom:16px; background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:12px 16px;">
+    <label style="font-size:13px; color:var(--ailin); font-weight:700; white-space:nowrap;">아일린 패시브 아군 물공 증가(%)</label>
+    <input type="number" step="any" id="ailinPassiveAtkInput" value="0" style="width:80px; flex-shrink:0; background:var(--panel2); border:1px solid var(--line); border-radius:6px; color:var(--text); padding:6px 8px; font-size:13px; text-align:right;">
+    <label style="font-size:13px; color:var(--ailin); font-weight:700; white-space:nowrap;">감전 확률 증가(%p)</label>
+    <input type="number" step="any" id="shockBonusInput" value="0" style="width:80px; flex-shrink:0; background:var(--panel2); border:1px solid var(--line); border-radius:6px; color:var(--text); padding:6px 8px; font-size:13px; text-align:right;">
+    <label style="font-size:13px; color:var(--hebnia); font-weight:700; white-space:nowrap;">헤브니아 아래 계수(%)</label>
+    <input type="number" step="any" id="hebLowerCoefInput" value="0" style="width:80px; flex-shrink:0; background:var(--panel2); border:1px solid var(--line); border-radius:6px; color:var(--text); padding:6px 8px; font-size:13px; text-align:right;">
+    <span style="font-size:11px; color:var(--sub); flex-basis:100%; line-height:1.5;">스킬 설명에 수치가 없어 기본 0으로 계산합니다. 정확한 값을 알면 입력하세요(저장되지 않음).</span>
+  </div>
+
   <div class="statpanel" id="statPanel"></div>
 
   <div class="summary" id="summaryCards"></div>
 
-  <h2>턴별 데미지 (4턴~70턴, 83행동+보스평타11회 도트)</h2>
+  <h2>턴별 데미지 (4턴~70턴, 보스평타 시점 도트 포함)</h2>
   <div class="toolbar" id="filterbar">
     <span class="chip active" data-f="all">전체</span>
     <span class="chip" data-f="헤브니아">헤브니아</span>
-    <span class="chip" data-f="파이">파이</span>
+    <span class="chip" data-f="아일린">아일린</span>
     <span class="chip" data-f="세인">세인</span>
     <span class="chip" data-f="샤오">샤오</span>
     <span class="chip" data-f="비스킷">비스킷</span>
@@ -163,36 +178,65 @@
 </div>
 
 <script>
-// ===================== 고정 데이터 (속공순서: 비스킷>헤브>샤오>파이>세인) =====================
-const TURNS = [["헤브","위",4],["파괴신","평타",5],["비스킷","평타",6],["헤브","평타",7],["샤오","평타",8],["샤오","아래",8],["파이","평타",9],["세인","평타",10],["파괴신","평타",11],["비스킷","평타",12],["파이","위",12],["헤브","평타",13],["샤오","평타",14],["파이","평타",15],["세인","평타",16],["비스킷","아래",16],["파괴신","평타",17],["비스킷","평타",18],["헤브","평타",19],["샤오","평타",20],["세인","위",20],["파이","평타",21],["세인","평타",22],["파괴신","평타",23],["비스킷","평타",24],["헤브","위",24],["헤브","평타",25],["샤오","평타",26],["파이","평타",27],["세인","평타",28],["헤브","각성",28],["파괴신","평타",29],["비스킷","평타",30],["헤브","평타",31],["샤오","평타",32],["세인","위",32],["파이","평타",33],["세인","평타",34],["파괴신","평타",35],["비스킷","평타",36],["샤오","아래",36],["헤브","평타",37],["샤오","평타",38],["파이","평타",39],["세인","평타",40],["파이","위",40],["파괴신","평타",41],["비스킷","평타",42],["헤브","평타",43],["샤오","평타",44],["세인","위",44],["파이","평타",45],["세인","평타",46],["파괴신","평타",47],["비스킷","평타",48],["비스킷","아래",48],["헤브","평타",49],["샤오","평타",50],["파이","평타",51],["세인","평타",52],["헤브","위",52],["파괴신","평타",53],["비스킷","평타",54],["헤브","평타",55],["샤오","평타",56],["세인","위",56],["파이","평타",57],["세인","평타",58],["파괴신","평타",59],["비스킷","평타",60],["샤오","아래",60],["헤브","평타",61],["샤오","평타",62],["파이","평타",63],["세인","평타",64],["파이","위",64],["파괴신","평타",65],["비스킷","평타",66],["헤브","평타",67],["샤오","평타",68],["세인","위",68],["파이","평타",69],["세인","평타",70]];
+// ===================== 고정 데이터 (파괴신 세인 빌드 ver. 만월, 26.9.18 기준) =====================
+// 속공순서: 비스킷(31) > 아일린(29) > 샤오(29) > 세인(29) > 헤브니아(25)
+// 턴 번호 규칙(기존과 동일): 4턴부터 6행동마다 [파괴신 평타 → 속공순 평타] 반복, 스킬은 공략의 스킬 순서 턴에 사용.
+// 같은 턴이면 평타가 먼저, 스킬이 나중.
+const LAST_TURN = 70;
+const SPEED_ORDER = ['비스킷','아일린','샤오','세인','헤브'];
+const SKILL_ORDER = [
+  [4,'아일린','아래'],[8,'헤브','위'],[12,'샤오','아래'],[16,'비스킷','아래'],[20,'세인','위'],
+  [24,'아일린','아래'],[28,'헤브','위'],[32,'세인','위'],[36,'샤오','아래'],[40,'헤브','각성'],
+  [44,'세인','위'],[48,'비스킷','아래'],[52,'헤브','위'],[56,'세인','위'],[60,'샤오','아래'],
+  [64,'헤브','아래'],[68,'세인','위'],
+];
 
-const BOSS_BASIC = [5,11,17,23,29,35,41,47,53,59,65];
-const HEBNIA_BASIC = [7,13,19,25,31,37,43,49,55,61,67];
-const PI_BASIC = [9,15,21,27,33,39,45,51,57,63,69];
-const SEIN_BASIC = [10,16,22,28,34,40,46,52,58,64,70];
-const SHAO_BASIC = [8,14,20,26,32,38,44,50,56,62,68];
-const BISCUIT_BASIC = [6,12,18,24,30,36,42,48,54,60,66];
+function basicTurns(offset){ const a=[]; for(let t=5+offset; t<=LAST_TURN; t+=6) a.push(t); return a; }
+const BOSS_BASIC = basicTurns(0);
+const BASIC = {};
+SPEED_ORDER.forEach((c,i)=> BASIC[c] = basicTurns(i+1));
 
-const HV_RANGES = [[4,29],[24,53],[52,9999]];        // 헤브니아 취약(보스대상)
-const SD_RANGES = [[9,35],[37,65],[61,9999]];         // 샤오 방깎(보스대상, 다음타부터)
-const PB_RANGES = [[13,29],[41,53],[65,9999]];        // 파이 화상(보스대상)
-const HEB_ULT_SELF = [28,55];
-const HEB_ULT_PI   = [28,57];
-const HEB_ULT_SEIN = [28,58];
-const SEIN_BISCUIT_RANGES = [[16,46],[48,70]];
-const PI_BISCUIT_RANGES   = [[16,45],[48,69]];
+const TURNS = [];
+for (let t=4; t<=LAST_TURN; t++){
+  if (BOSS_BASIC.includes(t)) TURNS.push(['파괴신','평타',t]);
+  SPEED_ORDER.forEach(c=>{ if (BASIC[c].includes(t)) TURNS.push([c,'평타',t]); });
+  SKILL_ORDER.forEach(([st,c,a])=>{ if (st===t) TURNS.push([c,a,t]); });
+}
+function skillTurns(char, action){ return SKILL_ORDER.filter(([,c,a])=>c===char && a===action).map(([t])=>t); }
+
+// 버프/디버프 지속 규칙(기존 계산기 실측 규칙과 동일): 시전 턴부터 "대상의 평타 N회째"까지
+function nthAfter(list, t0, n){ const after = list.filter(t=>t>t0); return after.length>=n ? after[n-1] : 9999; }
+function rangesFor(casts, targetTurns, n, startOffset){ return casts.map(c=>[c+(startOffset||0), nthAfter(targetTurns, c, n)]); }
+
+const HV_RANGES = rangesFor(skillTurns('헤브','위'), BOSS_BASIC, 5);      // 헤브니아 취약(보스대상, 시전 즉시)
+const SD_RANGES = rangesFor(skillTurns('샤오','아래'), BOSS_BASIC, 5, 1); // 샤오 방깎(보스대상, 다음타부터)
+const HEB_ULT_CASTS = skillTurns('헤브','각성');
+const HEB_ULT_RANGES = {   // 헤브 각성 버프 대상: 세인, 헤브, 샤오
+  hebnia: rangesFor(HEB_ULT_CASTS, BASIC['헤브'], 5),
+  sein:   rangesFor(HEB_ULT_CASTS, BASIC['세인'], 5),
+  shao:   rangesFor(HEB_ULT_CASTS, BASIC['샤오'], 5),
+};
+const BISCUIT_CASTS = skillTurns('비스킷','아래');
+const BISCUIT_RANGES = {   // 비스킷 버프 대상: 세인, 헤브
+  sein:   rangesFor(BISCUIT_CASTS, BASIC['세인'], 5),
+  hebnia: rangesFor(BISCUIT_CASTS, BASIC['헤브'], 5),
+};
+const AILIN_LOWER_CASTS = skillTurns('아일린','아래');
+const SEIN_UPPER_CASTS = skillTurns('세인','위');
+const HEB_FIRST_ACTION = Math.min(...TURNS.filter(([c])=>c==='헤브').map(([,,t])=>t));
+
 function inRangesArr(t, ranges){ return ranges.some(([lo,hi])=> t>=lo && t<=hi); }
 
 function inRanges(t, ranges){ return ranges.some(([lo,hi])=> t>=lo && t<=hi); }
 function inRange(t, [lo,hi]){ return t>=lo && t<=hi; }
 
-// ===================== 기본 스탯값 (전부 게임 화면에서 보이는 값만) =====================
+// ===================== 기본 스탯값 (공략 스펙 사진의 스탯 화면 값) =====================
 const DEFAULT_STATS = {
-  hebnia: { atk:4615, cc:87, cd:270, wc:25, amp:14.4 },
-  pi:     { atk:4795, cc:91, cd:282, wc:25, amp:12 },
-  sein:   { atk:4585, cc:59, cd:318, wc:35, amp:16 },
-  shao:   { atk:4622, cc:99, cd:264, wc:20, amp:4.8 },
-  biscuit:{ matk:2328, defense:2207, cc:21, cd:150, wc:5, amp:0 },
+  sein:   { atk:4735, cc:59, cd:330, wc:25, amp:16 },
+  hebnia: { atk:4694, cc:87, cd:282, wc:25, amp:16 },
+  shao:   { atk:4553, cc:91, cd:264, wc:35, amp:8 },
+  ailin:  { atk:4465, cc:97, cd:252, wc:20, amp:16 },
+  biscuit:{ matk:2648, defense:2067, cc:5, cd:150, wc:15, amp:2.4 },
 };
 const RING_DEFS = {
   none:   { label:'없음', dmgup:0, cc:0, wc:0 },
@@ -204,83 +248,72 @@ const RING_DEFS = {
   chulhyeol: { label:'출혈 세공(15% 확률로 출혈 발동)', dmgup:0, cc:0, wc:0 },
 };
 const RING_DEFAULTS = {
-  hebnia: ['tobeol','chihwak'],
-  pi: ['tobeol','chihwak'],
   sein: ['tobeol','gongseong'],
-  shao: ['hwasang','chulhyeol'],
-  biscuit: ['hwasang','chulhyeol'],
+  hebnia: ['tobeol','chihwak'],
+  shao: ['tobeol','chihwak'],
+  ailin: ['tobeol','chulhyeol'],
+  biscuit: ['tobeol','chulhyeol'],
 };
 let state_rings = JSON.parse(JSON.stringify(RING_DEFAULTS));
 function ringDmgup(char){ return state_rings[char].reduce((s,k)=>s+RING_DEFS[k].dmgup,0); }
 function ringCc(char){ return state_rings[char].reduce((s,k)=>s+RING_DEFS[k].cc,0); }
 function ringWc(char){ return state_rings[char].reduce((s,k)=>s+RING_DEFS[k].wc,0); }
-// 화상/출혈: 반지 아님. 평타 적중시 기본 15% 확률로 화상 또는 출혈 발생(고정 메커니즘, 반지와 무관)
 
 const DEFAULT_PET_POTENTIAL = 63; // 윈디 잠재(공%) 합계 18+15+15+15
-// ※ cc(치명타확률)는 반지 미포함 순수값. 치확 반지 선택시 자동으로 +10% 반영됨(세인은 패시브로 자체 확정크리 41%도 별도 반영)
-// ===================== 캐릭터별 "버프0 순수ATK" 선형모델 =====================
-// 실측 2개 지점(서로 다른 두 유저 스탯)으로 역산: pureATK = (A + B*rawStat) * (1+펫잠재%)
-const LINEAR_MODEL = {
-  pi:     { A: 2112.589, B: 0.765244 },
-  sein:   { A: -27713.201, B: 7.200429 },
-  hebnia: { A: -3437.066, B: 2.035301 },
-};
-function pureAtkLinear(char, rawStat, petPotentialPct){
-  const m = LINEAR_MODEL[char];
-  return (m.A + m.B*rawStat) * (1 + petPotentialPct/100);
-}
-
-function petScale(){
-  return (1 + state_petPotential/100) / (1 + DEFAULT_PET_POTENTIAL/100);
-}
-function statScale(char){
-  // 샤오/비스킷은 아직 2번째 캘리브레이션 포인트가 없어 기존 비례스케일 유지
-  const rawNow = (char==='biscuit') ? state_S.biscuit.matk : state_S[char].atk;
-  const rawBase = (char==='biscuit') ? DEFAULT_STATS.biscuit.matk : DEFAULT_STATS[char].atk;
-  return rawNow / rawBase;
-}
-
-// 캘리브레이션 참고용(샤오 - 단일포인트, 비례스케일 유지)
-const CALIBRATED = {
-  shao: { atkFixed: 6968.8 },
-};
-
-
+// ※ cc(치명타확률)는 반지 미포함 순수값(스탯 화면 값). 치확 반지 선택시 자동으로 +10% 반영됨(세인은 패시브로 자체 확정크리 41%도 별도 반영)
 
 // 고정 상수(장비/패시브 - 스탯 아님, 버프 아님 -> 항상 켜짐)
 const CONST = {
   petFlat: 564, petGong: 0.15,
   hebniaPassiveAtk: 0.25,
-  seinFormation: 630,          // 도감1500*0.42
-  piVuln: 0.20, windyVuln: 0.30, hebniaSelfVuln: 0.29,
+  windyVuln: 0.30, hebniaSelfVuln: 0.29,
   biscuitDefshred: 0.24, shaoDefshred: 0.39,
-  avenger: 0.70, ringHebniaPi: 0.12, ringSein: 0.22, shaoPassive: 0.23,
+  avenger: 0.70, shaoPassive: 0.23,
   biscuitBuffDmgup: 0.40, biscuitBuffWc: 0.54,
   hebUltAtk: 0.23, hebUltCd: 0.34,
-  piBurnBonus: 0.70,
-  // 보정계수(실측검증)
-  corrHebnia: 1.190,
-  corrSeinSkill: 1.0, corrSeinBasic: 1.0,
-  corrPiSkill1: 1.0, corrPiSkill2: 1.0,
-  corrPiBasicNoBuff: 1/1.168, corrPiBasicBiscuit: 1/1.168/0.650, corrPiBasicHebUltExtra: 1/0.9265,
-  corrShao: 1.000,
+  // 아일린 (스킬 설명 기준)
+  ailinBasic: 1.45, ailinBasicShock: 0.65,      // 평타 145%, 감전 대상이면 +65%
+  ailinLowerHit: 0.75, ailinLowerHits: 2,       // 아래(청천벽력·진) 75% x 2회
+  ailinShockChance: 0.35,                       // 아래 타격마다 감전 35% (2턴)
+  ailinDefshredStack: 0.08, ailinDefshredMax: 4, // 타격마다 방깎 8% 1중첩, 최대 4중첩
+  corrSeinBasic: 1.0, corrShao: 1.000,
 };
 
+// 스킬 설명에 수치가 없는 값 (화면 입력칸에서 조정, 기본 0)
+let state_ailinPassiveAtk = 0;   // 아일린 패시브: 모든 아군 물리 공격력 증가(%)
+let state_shockBonus = 0;        // 아일린 패시브: 감전 효과 적용 확률 증가(%p)
+let state_hebLowerCoef = 0;      // 헤브니아 아래 스킬 계수(%)
+
 let state_petPotential = DEFAULT_PET_POTENTIAL;
-let state_S = null; // computeAll()에서 넘겨받는 현재 스탯(참조용, statScale에서 사용)
+let state_S = null; // computeAll()에서 넘겨받는 현재 스탯(참조용)
 
 const BOSS_DEF = 1733, BOSS_HP = 5000000;
 
 // ===================== 파괴신 방어계수/취약% (턴 기준, 전부 고정 규칙) =====================
+// 아일린 방깎 중첩: 아래 시전 다음 행동부터 적용, 지속시간 정보가 없어 전투 끝까지 유지로 가정
+function ailinStacksAt(t){
+  const hits = AILIN_LOWER_CASTS.filter(c=>c<t).length * CONST.ailinLowerHits;
+  return Math.min(hits, CONST.ailinDefshredMax);
+}
 function defCoefAt(t){
-  let ds = CONST.biscuitDefshred;
+  let ds = CONST.biscuitDefshred + ailinStacksAt(t)*CONST.ailinDefshredStack;
   if (inRanges(t, SD_RANGES)) ds += CONST.shaoDefshred;
+  ds = Math.min(ds, 1);
   return 1 + BOSS_DEF*(1-ds)*0.00214;
 }
 function vulnAt(t){
-  let v = CONST.piVuln + CONST.windyVuln;
+  let v = CONST.windyVuln;
   if (inRanges(t, HV_RANGES)) v += CONST.hebniaSelfVuln;
   return v;
+}
+// 보스 감전 확률: 아일린 아래 2타 각각 감전(2턴 = 보스 평타 2회째까지) → 그 사이 행동에 적용
+function shockProbAt(t){
+  const p = Math.min(CONST.ailinShockChance + state_shockBonus/100, 1);
+  let none = 1;
+  AILIN_LOWER_CASTS.forEach(c=>{
+    if (t>c && t<nthAfter(BOSS_BASIC, c, 2)) none *= Math.pow(1-p, CONST.ailinLowerHits);
+  });
+  return 1 - none;
 }
 function critWeakFour(atk, coef, dc, cd, du, vl, amp, corr, wd){
   wd = wd || 1.3;
@@ -293,20 +326,13 @@ function critWeakFour(atk, coef, dc, cd, du, vl, amp, corr, wd){
   };
 }
 
-// ===================== 캐릭터별 ATK/버프 함수 =====================
-// 모든 캐릭터: (기존 검증된 순수ATK) x 원본스탯비례 x 펫잠재%비례 로 근사 스케일링
-// ===================== 표준 ATK 공식 (전 캐릭터 공통 구조) =====================
-// 최종ATK = (스탯창ATK [+세인만 진형보너스630] + 펫깡공564) × (1+버프공%+펫공%15%+펫잠재% [헤브니아는 펫잠재 미적용])
 // ===================== 표준 ATK 공식 (전 캐릭터 공통 구조, 최종 검증) =====================
-// 최종ATK = (스탯창ATK + 펫깡공564 + 도감×진형%) × (1+버프공%+펫공15%+펫잠재%)
-// 도감/장비공%/장비깡공/잠재능력은 캐릭터별 확정값(참고용 - 진형%0인 캐릭터는 도감이 결과에 영향 없음)
+// 최종ATK = (스탯창ATK + 펫깡공564 + 도감×펫잠재% + 도감×진형%) × (1+버프공%+펫공15%)
 const CHAR_CONST = {
-  sein:    { dogam: 1500, gearPct: 0.86, transcendPct: 0.48, gearFlat: 855, potential: 370, formaPct: 0.4 },
-  pi:      { dogam: 1500, gearPct: 0.86, transcendPct: 0.36, gearFlat: 855, potential: 370, formaPct: 0 },
-  shao:    { dogam: 1389, gearPct: 0.86, transcendPct: 0.39, gearFlat: 855, potential: 310, formaPct: 0 },
-  hebnia:  { dogam: 1569, gearPct: 0.86, transcendPct: 0.39, gearFlat: 855, potential: 310, formaPct: 0 },
-  biscuitAtk: { dogam: 1095, gearPct: 0.86, transcendPct: 0.12, gearFlat: 855, potential: 0, formaPct: 0 },
-  biscuitDef: { dogam: 675,  gearPct: 0.86, transcendPct: 0.48, gearFlat: 855, potential: 0, formaPct: 0 },
+  sein:    { dogam: 1500, formaPct: 0.4 },
+  shao:    { dogam: 1389, formaPct: 0 },
+  hebnia:  { dogam: 1569, formaPct: 0 },
+  ailin:   { dogam: 1500, formaPct: 0 },   // 아일린 도감 값 미확인 → 1500 가정
 };
 const DOGAM = 1500;
 function atkStandard(statATK, formaPct, buffgong, dogamOverride){
@@ -316,63 +342,40 @@ function atkStandard(statATK, formaPct, buffgong, dogamOverride){
   return bracket * (1 + buffgong + CONST.petGong);
 }
 
-function atkHebnia(S,t){
-  const passiveOn = t>4; // 헤브니아 본인 첫 행동(턴4)엔 상시패시브 미적용, 다음 행동부터 적용(실측검증)
-  const buff = (passiveOn?CONST.hebniaPassiveAtk:0) + (inRange(t,HEB_ULT_SELF)? CONST.hebUltAtk:0);
-  return atkStandard(S.hebnia.atk, CHAR_CONST.hebnia.formaPct, buff, CHAR_CONST.hebnia.dogam);
+// 헤브니아 패시브/각성 버프 대상: 헤브 본인 + 공격력 상위 2명(세인, 샤오)
+const HEB_BUFF_TARGETS = ['hebnia','sein','shao'];
+function buffAtk(char, t){
+  let b = state_ailinPassiveAtk/100;
+  if (HEB_BUFF_TARGETS.includes(char)){
+    // 헤브니아 본인 첫 행동엔 상시패시브 미적용, 다음 행동부터 적용(실측검증)
+    if (char!=='hebnia' || t>HEB_FIRST_ACTION) b += CONST.hebniaPassiveAtk;
+    if (inRanges(t, HEB_ULT_RANGES[char])) b += CONST.hebUltAtk;
+  }
+  return b;
 }
-function critdmgHebnia(S,t){ return S.hebnia.cd/100 + (inRange(t,HEB_ULT_SELF)? CONST.hebUltCd:0); }
-function dmgupHebnia(){ return CONST.avenger+ringDmgup("hebnia")+CONST.shaoPassive; }
-
-function atkPi(S,t){
-  const buff = CONST.hebniaPassiveAtk + (inRange(t,HEB_ULT_PI)? CONST.hebUltAtk:0);
-  const dogam=1500, gear=0.86, transcend=0.36, gearflat=855, potential=370;
-  const petpot = state_petPotential/100;
-  const bracket = dogam*(1+gear+transcend+petpot) + gearflat + potential + CONST.petFlat;
-  return bracket*(1+buff+CONST.petGong);
+function atkOf(S, char, t){
+  return atkStandard(S[char].atk, CHAR_CONST[char].formaPct, buffAtk(char,t), CHAR_CONST[char].dogam);
 }
-function critdmgPi(S,t){ return S.pi.cd/100 + (inRange(t,HEB_ULT_PI)? CONST.hebUltCd:0); }
-const PI_BURN_TURNS = new Set([12,18,24,30,36,42,48,54,60,66]); // 화상 지속 확인된 턴(실측 로그 기반, 근사)
-function dmgupPi(t){
-  let d = CONST.avenger+ringDmgup("pi")+CONST.shaoPassive;
-  if (inRangesArr(t, PI_BISCUIT_RANGES)) d += CONST.biscuitBuffDmgup;
+function critdmgOf(S, char, t){
+  const ult = HEB_ULT_RANGES[char] && inRanges(t, HEB_ULT_RANGES[char]) ? CONST.hebUltCd : 0;
+  return S[char].cd/100 + ult;
+}
+function biscuitBuffOn(char, t){ return !!BISCUIT_RANGES[char] && inRangesArr(t, BISCUIT_RANGES[char]); }
+function dmgupOf(char, t){
+  let d = CONST.avenger + ringDmgup(char) + CONST.shaoPassive;
+  if (biscuitBuffOn(char, t)) d += CONST.biscuitBuffDmgup;
   return d;
 }
-function wcPi(S,t){
-  let w = S.pi.wc/100;
-  if (inRangesArr(t, PI_BISCUIT_RANGES)) w = Math.min(w+CONST.biscuitBuffWc,1);
-  return w;
-}
 
-function atkSein(S,t){
-  const buff = CONST.hebniaPassiveAtk + (inRange(t,HEB_ULT_SEIN)? CONST.hebUltAtk:0);
-  return atkStandard(S.sein.atk, CHAR_CONST.sein.formaPct, buff, CHAR_CONST.sein.dogam);
+function atkShao(S, t){
+  // 기존 샤오 실측값(6968.8)은 버프0 표준식과 일치 → 표준식으로 통일 (헤브 패시브/각성 대상 포함)
+  return atkOf(S, 'shao', t);
 }
-function critdmgSein(S,t){ return S.sein.cd/100 + (inRange(t,HEB_ULT_SEIN)? CONST.hebUltCd:0); }
-function dmgupSein(t){
-  let d = CONST.avenger+ringDmgup("sein")+CONST.shaoPassive;
-  if (inRangesArr(t, SEIN_BISCUIT_RANGES)) d += CONST.biscuitBuffDmgup;
-  return d;
-}
-function wcSein(S,t){
-  let w = S.sein.wc/100;
-  if (inRangesArr(t, SEIN_BISCUIT_RANGES)) w = Math.min(w+CONST.biscuitBuffWc,1);
-  return w;
-}
-
-function atkShao(S){
-  // 샤오는 계산기 미지원이라 신규공식 검증 불가 - 기존 실측검증(6968.8) 기준 유지
-  return 6968.8 * (S.shao.atk/DEFAULT_STATS.shao.atk) * ((1+state_petPotential/100)/(1+DEFAULT_PET_POTENTIAL/100));
-}
-function dmgupShao(){ return CONST.avenger+CONST.shaoPassive; }
 
 function atkBiscuitM(S){
   // 비스킷은 계산기 미검증 - 펫잠재% 미적용(기존 검증안된 단순식 유지, 신경쓰지 않는다는 사용자 확인됨)
   return (S.biscuit.matk + CONST.petFlat) * (1 + CONST.petGong);
 }
-
-
-function piBasicCorr(t){ return 1.0; }
 
 // ===================== 전체 턴 계산 =====================
 function computeAll(S){
@@ -384,32 +387,30 @@ function computeAll(S){
     const dc = defCoefAt(t), vl = vulnAt(t);
 
     if (char==='헤브'){
-      const atk=atkHebnia(S,t), cd=critdmgHebnia(S,t), du=dmgupHebnia();
-      const coef = {'위':3.40,'평타':1.20,'각성':3.50}[action];
-      const r = critWeakFour(atk, coef, dc, cd, du, vl, 1+S.hebnia.amp/100, 1.0);
-      const label = {'위':'위(맹렬한공격)','평타':'평타','각성':'각성(유성폭발)'}[action];
+      const atk=atkOf(S,'hebnia',t), cd=critdmgOf(S,'hebnia',t), du=dmgupOf('hebnia',t), amp=1+S.hebnia.amp/100;
+      if (action==='아래' && !state_hebLowerCoef){
+        rows.push([t,'헤브니아','아래(계수 미입력)',{n:0,c:0,w:0,cw:0}]);
+        return;
+      }
+      const coef = {'위':3.40,'평타':1.20,'각성':3.50,'아래':state_hebLowerCoef/100}[action];
+      const r = critWeakFour(atk, coef, dc, cd, du, vl, amp, 1.0);
+      const label = {'위':'위(맹렬한공격)','평타':'평타','각성':'각성(유성폭발)','아래':'아래'}[action];
       rows.push([t,'헤브니아',label,r]);
 
-    } else if (char==='파이'){
-      const atk=atkPi(S,t), cd=critdmgPi(S,t), du=dmgupPi(t), amp=1+S.pi.amp/100;
-      const burnOn = PI_BURN_TURNS.has(t);
+    } else if (char==='아일린'){
+      const atk=atkOf(S,'ailin',t), cd=critdmgOf(S,'ailin',t), du=dmgupOf('ailin',t), amp=1+S.ailin.amp/100;
       if (action==='평타'){
-        const coef = burnOn ? (1.30+0.70) : 1.30;
+        const ps = shockProbAt(t);
+        const coef = CONST.ailinBasic + CONST.ailinBasicShock*ps;
         const r = critWeakFour(atk, coef, dc, cd, du, vl, amp, 1.0);
-        rows.push([t,'파이','평타',r]);
+        rows.push([t,'아일린', ps>0 ? `평타(감전 기댓값 ${Math.round(ps*100)}%)` : '평타', r]);
       } else {
-        const hp1=Math.min(BOSS_HP*0.26, atk*4.50), hp2=Math.min(BOSS_HP*0.14, atk*1.50);
-        let c1=4.10+hp1/atk, c2=1.25+hp2/atk;
-        if (burnOn){ c1+=0.70; }
-        c2+=0.70; // 위2는 위1이 같은 액션 내에서 100% 확률로 먼저 화상을 걸므로 burnOn 판정과 무관하게 항상 화상보너스 적용
-        const r1=critWeakFour(atk,c1,dc,cd,du,vl,amp,1.0);
-        const r2=critWeakFour(atk,c2,dc,cd,du,vl,amp,1.0);
-        rows.push([t,'파이','위-1타(염룡)',r1]);
-        rows.push([t,'파이','위-2타(동일열)',r2]);
+        const r = critWeakFour(atk, CONST.ailinLowerHit*CONST.ailinLowerHits, dc, cd, du, vl, amp, 1.0);
+        rows.push([t,'아일린','아래(청천벽력·진, 75%×2)',r]);
       }
 
     } else if (char==='세인'){
-      const atk=atkSein(S,t), cd=critdmgSein(S,t), du=dmgupSein(t), wc=wcSein(S,t), amp=1+S.sein.amp/100;
+      const atk=atkOf(S,'sein',t), cd=critdmgOf(S,'sein',t), du=dmgupOf('sein',t), amp=1+S.sein.amp/100;
       if (action==='평타'){
         const r = critWeakFour(atk,1.20,dc,cd,du,vl,amp,CONST.corrSeinBasic);
         rows.push([t,'세인','평타',r]);
@@ -420,7 +421,8 @@ function computeAll(S){
       }
 
     } else if (char==='샤오'){
-      const atk=atkShao(S), du=dmgupShao(), amp=1+S.shao.amp/100, cd=1+S.shao.cd/100;
+      const atk=atkShao(S,t), du=dmgupOf('shao',t), amp=1+S.shao.amp/100;
+      const cd = 1+S.shao.cd/100 + (inRanges(t, HEB_ULT_RANGES.shao)? CONST.hebUltCd:0);
       if (action==='평타'){
         const r = critWeakFour(atk,1.20,dc,cd,du,vl,amp,CONST.corrShao);
         rows.push([t,'샤오','평타',r]);
@@ -433,7 +435,7 @@ function computeAll(S){
 
     } else if (char==='비스킷'){
       if (action==='평타'){
-        const du=CONST.shaoPassive, amp=1+S.biscuit.amp/100, cd=1+S.biscuit.cd/100;
+        const du=CONST.shaoPassive+ringDmgup('biscuit'), amp=1+S.biscuit.amp/100, cd=1+S.biscuit.cd/100;
         const raw = atkBiscuitM(S)*0.50 + S.biscuit.defense*0.60;
         const r = critWeakFour(raw,1.0,dc,cd,du,vl,amp,1.0);
         rows.push([t,'비스킷','평타',r]);
@@ -443,15 +445,15 @@ function computeAll(S){
     }
   });
 
-  // 세인 패시브 3타 (20,32,44,56,68턴)
-  [20,32,44,56,68].forEach(t=>{
+  // 세인 패시브 3타 (세인 위 사용 턴)
+  SEIN_UPPER_CASTS.forEach(t=>{
     const dc=defCoefAt(t), vl=vulnAt(t);
-    const atk=atkSein(S,t), cd=critdmgSein(S,t), du=dmgupSein(t), amp=1+S.sein.amp/100;
+    const atk=atkOf(S,'sein',t), cd=critdmgOf(S,'sein',t), du=dmgupOf('sein',t), amp=1+S.sein.amp/100;
     const r = critWeakFour(atk,1.80,dc,cd,du,vl,amp,1.0);
     rows.push([t,'세인','패시브3타',r]);
   });
 
-  // 화상/출혈 도트 (파괴신 평타 11회 시점)
+  // 화상/출혈 도트 (파괴신 평타 시점)
   const dotRows = computeDot(S);
   dotRows.forEach(d=>rows.push(d));
 
@@ -459,28 +461,23 @@ function computeAll(S){
   return rows;
 }
 
+// 반지(화상/출혈 세공)를 낀 캐릭터의 평타마다 확률로 도트 발생
+const CHAR_KEY = {'헤브':'hebnia','아일린':'ailin','세인':'sein','샤오':'shao','비스킷':'biscuit'};
+const DOT_CHANCE = { biscuit: 0.165 }; // 기본 15%, 비스킷은 기존 값 유지
 function computeDot(S){
-  const piBasicTurns = PI_BASIC, shaoBasicTurns = SHAO_BASIC, biscuitBasicTurns = BISCUIT_BASIC;
-  const piSkillTurns = [12,40,64];
   const sources = [];
-  piBasicTurns.forEach(t=> sources.push({t,name:'파이평타화상',chance:0.35,dur:2,type:'burn',who:'pi'}));
-  piSkillTurns.forEach(t=>{
-    sources.push({t,name:'파이1타화상',chance:1.00,dur:3,type:'burn',who:'pi'});
-    sources.push({t,name:'파이2타화상',chance:0.60,dur:2,type:'burn',who:'pi'});
-  });
-  shaoBasicTurns.forEach(t=>{
-    sources.push({t,name:'샤오반지화상',chance:0.15,dur:2,type:'burn',who:'shao'});
-    sources.push({t,name:'샤오반지출혈',chance:0.15,dur:2,type:'bleed',who:'shao'});
-  });
-  biscuitBasicTurns.forEach(t=>{
-    sources.push({t,name:'비스킷반지화상',chance:0.165,dur:2,type:'burn',who:'biscuit'});
-    sources.push({t,name:'비스킷반지출혈',chance:0.165,dur:2,type:'bleed',who:'biscuit'});
+  SPEED_ORDER.forEach(name=>{
+    const who = CHAR_KEY[name];
+    const chance = DOT_CHANCE[who] || 0.15;
+    state_rings[who].forEach(ring=>{
+      const type = ring==='hwasang' ? 'burn' : ring==='chulhyeol' ? 'bleed' : null;
+      if (!type) return;
+      BASIC[name].forEach(t=> sources.push({t,chance,dur:2,type,who}));
+    });
   });
 
   function getAtk(who,t){
-    if(who==='pi') return atkPi(S,t);
-    if(who==='shao') return atkShao(S);
-    if(who==='biscuit') return atkBiscuitM(S);
+    return who==='biscuit' ? atkBiscuitM(S) : atkOf(S, who, t);
   }
   function consumedTicks(t0,dur){
     return BOSS_BASIC.filter(bt=>bt>=t0).slice(0,dur);
@@ -507,10 +504,10 @@ let S = JSON.parse(JSON.stringify(DEFAULT_STATS));
 let currentFilter = 'all';
 
 const CHAR_META = {
-  hebnia: {label:'헤브니아', color:'var(--hebnia)', fields:[['atk','물리공격력'],['cc','치명타확률(%)'],['cd','치명타피해(%)'],['wc','약점공격확률(%)'],['amp','피해증폭(%)']]},
-  pi:     {label:'파이', color:'var(--pi)', fields:[['atk','물리공격력'],['cc','치명타확률(%)'],['cd','치명타피해(%)'],['wc','약점공격확률(%)'],['amp','피해증폭(%)']]},
   sein:   {label:'세인', color:'var(--sein)', fields:[['atk','물리공격력'],['cc','치명타확률(%)'],['cd','치명타피해(%)'],['wc','약점공격확률(%)'],['amp','피해증폭(%)']]},
+  hebnia: {label:'헤브니아', color:'var(--hebnia)', fields:[['atk','물리공격력'],['cc','치명타확률(%)'],['cd','치명타피해(%)'],['wc','약점공격확률(%)'],['amp','피해증폭(%)']]},
   shao:   {label:'샤오', color:'var(--shao)', fields:[['atk','물리공격력'],['cc','치명타확률(%)'],['cd','치명타피해(%)'],['wc','약점공격확률(%)'],['amp','피해증폭(%)']]},
+  ailin:  {label:'아일린', color:'var(--ailin)', fields:[['atk','물리공격력'],['cc','치명타확률(%)'],['cd','치명타피해(%)'],['wc','약점공격확률(%)'],['amp','피해증폭(%)']]},
   biscuit:{label:'비스킷', color:'var(--biscuit)', fields:[['matk','마법공격력'],['defense','방어력'],['cc','치명타확률(%)'],['cd','치명타피해(%)'],['wc','약점공격확률(%)'],['amp','피해증폭(%)']]},
 };
 
@@ -569,7 +566,7 @@ function renderStatPanel(){
 
 function fmt(n){ return Math.round(n).toLocaleString('en-US'); }
 
-const CHAR_COLORS = {'헤브니아':'#7dd3fc','파이':'#fb923c','세인':'#c084fc','샤오':'#f472b6','비스킷':'#fde047','파괴신(도트)':'#94a3b8'};
+const CHAR_COLORS = {'헤브니아':'#7dd3fc','아일린':'#fb923c','세인':'#c084fc','샤오':'#f472b6','비스킷':'#fde047','파괴신(도트)':'#94a3b8'};
 
 function renderTable(rows){
   const tbody = document.getElementById('tbody');
@@ -589,7 +586,7 @@ function renderTable(rows){
         <td class="turn">${t}</td>
         <td><span class="char-tag" style="--c:${color}">${char}</span></td>
         <td class="action">${action}</td>
-        <td class="num" colspan="4" style="text-align:center;color:var(--sub);font-style:italic;">데미지 없음 (버프 전용)</td>
+        <td class="num" colspan="4" style="text-align:center;color:var(--sub);font-style:italic;">${action.includes('미입력') ? '계수 미입력 (위 입력칸에서 헤브니아 아래 계수 입력)' : '데미지 없음 (버프 전용)'}</td>
       </tr>`;
     } else {
       html += `<tr>
@@ -637,9 +634,9 @@ function computeExpectedTotal(rows){
     if (r.n===0 && r.cw===0) return; // 버프전용
     if (action==='아래(정기흡공,출혈無)') return; // 아래(출혈有) 줄에서 블렌드 처리, 중복방지
     let cc, wc;
-    if (char==='헤브니아') { cc=Math.min((S.hebnia.cc+ringCc('hebnia'))/100,1); wc=Math.min((S.hebnia.wc+ringWc('hebnia'))/100,1); }
-    else if (char==='파이') { cc=Math.min((S.pi.cc+ringCc('pi'))/100,1); wc = inRangesArr(t, PI_BISCUIT_RANGES)? Math.min(S.pi.wc/100+ringWc('pi')/100+CONST.biscuitBuffWc,1): Math.min(S.pi.wc/100+ringWc('pi')/100,1); }
-    else if (char==='세인') { cc=Math.min((S.sein.cc+41+ringCc('sein'))/100,1); wc = inRangesArr(t, SEIN_BISCUIT_RANGES)? Math.min(S.sein.wc/100+ringWc('sein')/100+CONST.biscuitBuffWc,1): Math.min(S.sein.wc/100+ringWc('sein')/100,1); }
+    if (char==='헤브니아') { cc=Math.min((S.hebnia.cc+ringCc('hebnia'))/100,1); wc = Math.min(S.hebnia.wc/100+ringWc('hebnia')/100+(biscuitBuffOn('hebnia',t)?CONST.biscuitBuffWc:0),1); }
+    else if (char==='아일린') { cc=Math.min((S.ailin.cc+ringCc('ailin'))/100,1); wc=Math.min((S.ailin.wc+ringWc('ailin'))/100,1); }
+    else if (char==='세인') { cc=Math.min((S.sein.cc+41+ringCc('sein'))/100,1); wc = Math.min(S.sein.wc/100+ringWc('sein')/100+(biscuitBuffOn('sein',t)?CONST.biscuitBuffWc:0),1); }
     else if (char==='샤오') { cc=Math.min((S.shao.cc+ringCc('shao'))/100,1); wc=Math.min((S.shao.wc+ringWc('shao'))/100,1); }
     else if (char==='비스킷'){ cc=Math.min((S.biscuit.cc+ringCc('biscuit'))/100,1); wc=Math.min((S.biscuit.wc+ringWc('biscuit'))/100,1); }
     else { cc=0; wc=0; }
@@ -681,6 +678,11 @@ document.getElementById('petPotentialInput').addEventListener('input', (e) => {
   e.target.classList.toggle('changed', state_petPotential !== DEFAULT_PET_POTENTIAL);
   renderAll();
 });
+
+[['ailinPassiveAtkInput', v=>state_ailinPassiveAtk=v], ['shockBonusInput', v=>state_shockBonus=v], ['hebLowerCoefInput', v=>state_hebLowerCoef=v]]
+  .forEach(([id, set])=>{
+    document.getElementById(id).addEventListener('input', (e)=>{ set(parseFloat(e.target.value) || 0); renderAll(); });
+  });
 
 // URL 쿼리스트링에서 로그인 정보 읽기 (index.html의 iframe src에 포함되어 전달됨)
 const urlParams = new URLSearchParams(window.location.search);
@@ -745,7 +747,7 @@ loadSavedCalculatorData().then(() => {
 });
 
 const CHAR_NAME_MAP = {
-  '헤브니아': 'hebnia', '파이': 'pi', '세인': 'sein', '샤오': 'shao', '비스킷': 'biscuit',
+  '헤브니아': 'hebnia', '아일린': 'ailin', '세인': 'sein', '샤오': 'shao', '비스킷': 'biscuit',
 };
 
 document.getElementById('extractStatsBtn').addEventListener('click', async () => {
