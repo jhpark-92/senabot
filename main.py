@@ -405,7 +405,7 @@ class MemoUpdate(BaseModel):
 class RaidUpdate(BaseModel):
     boss: str | None = None   # "list" 타입 카테고리일 때만 사용 (예: "태오")
     content: str
-    images: list[str] | None = None  # "single" 타입(파괴신) 사진 URL 목록. None이면 기존 사진 유지
+    images: list[str] | None = None  # 사진 URL 목록 (single: 파괴신 / list: 해당 보스). None이면 기존 사진 유지
     username: str
     password: str
 
@@ -636,6 +636,9 @@ def update_raid(category: str, update: RaidUpdate):
             raise HTTPException(status_code=400, detail="존재하지 않는 보스입니다.")
         before = entry["bosses"].get(update.boss, "")
         entry["bosses"][update.boss] = update.content
+        if update.images is not None:
+            # 보스별 사진은 bosses(본문 문자열)와 분리해 boss_images에 저장
+            entry.setdefault("boss_images", {})[update.boss] = update.images
         target_label = f"{category} - {update.boss}"
         after = update.content
 

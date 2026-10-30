@@ -174,11 +174,10 @@
   }
   .edit-form input:focus, .edit-form textarea:focus, .plain-textarea:focus { outline: none; border-color: var(--gold-dim); }
   .edit-form .field-hint { color: var(--text-dim); font-size: 11.5px; margin-top: 4px; }
-  .guide-images { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
-  .guide-images img { max-width: 100%; max-height: 400px; border-radius: 4px; cursor: zoom-in; }
-  .img-thumb { position: relative; }
-  .img-thumb img { width: 96px; height: 96px; object-fit: cover; border-radius: 4px; display: block; }
-  .img-thumb button { display: block; width: 96px; margin-top: 4px; padding: 3px 0; background: var(--danger); color: #fff; border: none; border-radius: 4px; font-size: 12px; cursor: pointer; }
+  .guide-images { display: flex; flex-direction: column; align-items: flex-start; gap: 14px; margin-top: 8px; }
+  .guide-images img { display: block; max-width: 100%; height: auto; border-radius: 4px; }
+  .img-thumb { max-width: 100%; }
+  .img-thumb button { display: block; margin-top: 6px; padding: 5px 16px; background: var(--danger); color: #fff; border: none; border-radius: 4px; font-size: 12px; cursor: pointer; }
   .save-btn {
     background: var(--gold); color: #1a1a1a; border: none; border-radius: 5px;
     padding: 10px 24px; font-weight: 600; font-size: 13.5px; cursor: pointer; margin-top: 18px;
@@ -1491,11 +1490,23 @@ function initApp() {
     detail.innerHTML = `
       <div class="detail-name">${bossName}</div>
       <textarea id="raidBossTextarea" class="plain-textarea" style="min-height:50vh;">${content}</textarea>
+      <div class="edit-form">
+        <label>사진</label>
+        <input type="file" id="raidBossImages" accept="image/*" multiple />
+        <div class="field-hint">jpg, png, gif, webp · 장당 10MB 이하</div>
+        <div class="guide-images" id="raidBossImageList"></div>
+      </div>
       <div class="footer-row">
         <div id="raidBossStatus" style="font-size:12.5px;"></div>
         <button class="save-btn" id="raidBossSaveBtn" style="margin-top:10px;">저장</button>
       </div>
     `;
+    const bossImageEditor = createImageEditor(
+      document.getElementById('raidBossImages'),
+      document.getElementById('raidBossImageList'),
+      document.getElementById('raidBossStatus'),
+      (raidDataCache[category].boss_images || {})[bossName]
+    );
 
     document.getElementById('raidBossSaveBtn').addEventListener('click', async () => {
       const btn = document.getElementById('raidBossSaveBtn');
@@ -1510,17 +1521,19 @@ function initApp() {
           body: JSON.stringify({
             boss: bossName,
             content: document.getElementById('raidBossTextarea').value,
+            images: bossImageEditor.images,
             username: username,
             password: password
           })
         });
         if (!res.ok) throw new Error();
         raidDataCache[category].bosses[bossName] = document.getElementById('raidBossTextarea').value;
+        raidDataCache[category].boss_images = { ...(raidDataCache[category].boss_images || {}), [bossName]: bossImageEditor.images };
         status.textContent = '저장되었습니다.';
-        status.style.color = 'var(--ok)';
+        status.className = 'save-status ok';
       } catch (e) {
         status.textContent = '저장에 실패했습니다.';
-        status.style.color = 'var(--danger)';
+        status.className = 'save-status err';
       } finally {
         btn.disabled = false;
       }
