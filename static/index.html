@@ -178,7 +178,7 @@
   .guide-images img { max-width: 100%; max-height: 400px; border-radius: 4px; cursor: zoom-in; }
   .img-thumb { position: relative; }
   .img-thumb img { width: 96px; height: 96px; object-fit: cover; border-radius: 4px; display: block; }
-  .img-thumb button { position: absolute; top: 2px; right: 2px; background: rgba(0,0,0,.7); color: #fff; border: none; border-radius: 50%; width: 22px; height: 22px; cursor: pointer; line-height: 1; }
+  .img-thumb button { display: block; width: 96px; margin-top: 4px; padding: 3px 0; background: var(--danger); color: #fff; border: none; border-radius: 4px; font-size: 12px; cursor: pointer; }
   .save-btn {
     background: var(--gold); color: #1a1a1a; border: none; border-radius: 5px;
     padding: 10px 24px; font-weight: 600; font-size: 13.5px; cursor: pointer; margin-top: 18px;
@@ -718,11 +718,13 @@ function createImageEditor(inputEl, listEl, statusEl, initial) {
   };
   const render = () => {
     listEl.innerHTML = images.map((u, i) =>
-      `<div class="img-thumb"><a href="${u}" target="_blank"><img src="${u}" /></a><button type="button" data-idx="${i}" title="삭제">×</button></div>`
+      `<div class="img-thumb"><a href="${u}" target="_blank"><img src="${u}" /></a><button type="button" data-idx="${i}">삭제</button></div>`
     ).join('');
     listEl.querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
+      if (!confirm('이 사진을 삭제할까요?')) return;
       images.splice(Number(b.dataset.idx), 1);
       render();
+      setStatus('사진이 목록에서 삭제되었습니다. 저장 버튼을 눌러야 반영됩니다.', 'ok');
     }));
   };
   const addFiles = async files => {
