@@ -552,14 +552,11 @@
           <textarea id="noticeContentInput" rows="4" style="min-height: 480px;"></textarea>
           
           <label style="display:flex; align-items:center; gap:8px;">
-            첨부 파일 (이미지 등)
+            사진 (여러 장)
             <span style="font-size:11px; color:var(--text-dim); font-weight:normal;">※ 화면에 캡처하고 여기서 Ctrl+V (붙여넣기) 하셔도 됩니다.</span>
           </label>
-          <input type="file" id="noticeFileInput" accept="image/*,.pdf,.txt,.zip" />
-          <div id="pasteIndicator" class="paste-indicator">✅ 클립보드 이미지가 첨부되었습니다.</div>
-
-          <label>사진 (여러 장)</label>
           <input type="file" id="noticeImagesInput" accept="image/*" multiple />
+          <div id="pasteIndicator" class="paste-indicator">✅ 클립보드 이미지가 첨부되었습니다.</div>
           <div class="field-hint">jpg, png, gif, webp · 장당 10MB 이하</div>
           <div class="guide-images" id="noticeImageList"></div>
           
@@ -1890,7 +1887,7 @@ function initApp() {
   });
   
   // 수동으로 파일을 변경하면 붙여넣기 알림 숨김
-  document.getElementById('noticeFileInput').addEventListener('change', () => {
+  document.getElementById('noticeImagesInput').addEventListener('change', () => {
     document.getElementById('pasteIndicator').style.display = 'none';
   });
 
@@ -1914,7 +1911,6 @@ function initApp() {
     
     document.getElementById('noticeTitleInput').value = '';
     document.getElementById('noticeContentInput').value = '';
-    document.getElementById('noticeFileInput').value = '';
     document.getElementById('pasteIndicator').style.display = 'none';
     document.getElementById('noticeStatus').textContent = '';
     noticeImageEditor.set([]);
@@ -2018,7 +2014,6 @@ function initApp() {
     const status = document.getElementById('noticeStatus');
     const title = document.getElementById('noticeTitleInput').value.trim();
     const content = document.getElementById('noticeContentInput').value.trim();
-    const fileInput = document.getElementById('noticeFileInput');
     const editingId = btn.dataset.editingId;   // 있으면 수정 모드
 
     if (!title || !content) {
@@ -2034,9 +2029,6 @@ function initApp() {
     formData.append('username', username);
     formData.append('password', password);
     formData.append('images', JSON.stringify(noticeImageEditor.images));
-    if (fileInput.files.length > 0) {
-      formData.append('file', fileInput.files[0]);
-    }
 
     try {
       const res = await fetch(editingId ? '/notices/' + editingId : '/notices', {
@@ -2047,7 +2039,6 @@ function initApp() {
 
       document.getElementById('noticeTitleInput').value = '';
       document.getElementById('noticeContentInput').value = '';
-      fileInput.value = '';
       document.getElementById('pasteIndicator').style.display = 'none';
       status.textContent = '';
       noticeImageEditor.set([]);
