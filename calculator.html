@@ -321,13 +321,15 @@ function atkStandard(statATK, formaPct, buffgong, dogamOverride){
 // 헤브니아 패시브/각성 버프 대상: 헤브 본인 + 공격력 상위 2명(세인, 샤오)
 const HEB_BUFF_TARGETS = ['hebnia','sein','shao'];
 function buffAtk(char, t){
-  let b = CONST.ailinPassiveAtk;
+  // 패시브 물리 공격력 증가(헤브 25%, 아일린 25%)는 중복되지 않음 → 큰 값 하나만 적용
+  let passive = CONST.ailinPassiveAtk;
+  let b = 0;
   if (HEB_BUFF_TARGETS.includes(char)){
     // 헤브니아 본인 첫 행동엔 상시패시브 미적용, 다음 행동부터 적용(실측검증)
-    if (char!=='hebnia' || t>HEB_FIRST_ACTION) b += CONST.hebniaPassiveAtk;
+    if (char!=='hebnia' || t>HEB_FIRST_ACTION) passive = Math.max(passive, CONST.hebniaPassiveAtk);
     if (inRanges(t, HEB_ULT_RANGES[char])) b += CONST.hebUltAtk;
   }
-  return b;
+  return b + passive;
 }
 function atkOf(S, char, t){
   return atkStandard(S[char].atk, CHAR_CONST[char].formaPct, buffAtk(char,t), CHAR_CONST[char].dogam);
@@ -392,7 +394,7 @@ function computeAll(S){
 
     } else if (char==='샤오'){
       const atk=atkShao(S,t), du=dmgupOf('shao',t), amp=1+S.shao.amp/100;
-      const cd = 1+S.shao.cd/100 + (inRanges(t, HEB_ULT_RANGES.shao)? CONST.hebUltCd:0);
+      const cd = critdmgOf(S,'shao',t);
       if (action==='평타'){
         const r = critWeakFour(atk,1.20,dc,cd,du,vl,amp,CONST.corrShao);
         rows.push([t,'샤오','평타',r]);
