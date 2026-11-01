@@ -129,12 +129,6 @@
     <span style="font-size:11px; color:var(--sub); flex-basis:100%; line-height:1.5;">깡공564+15%는 고정. 잠재%는 전원 공유(현재 18+15+15+15=63%).</span>
   </div>
 
-  <div id="unknownParamRow" style="display:flex; flex-wrap:wrap; align-items:center; gap:8px 12px; margin-bottom:16px; background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:12px 16px;">
-    <label style="font-size:13px; color:var(--ailin); font-weight:700; white-space:nowrap;">아일린 패시브 아군 물공 증가(%)</label>
-    <input type="number" step="any" id="ailinPassiveAtkInput" value="0" style="width:80px; flex-shrink:0; background:var(--panel2); border:1px solid var(--line); border-radius:6px; color:var(--text); padding:6px 8px; font-size:13px; text-align:right;">
-    <span style="font-size:11px; color:var(--sub); flex-basis:100%; line-height:1.5;">스킬 설명에 수치가 없어 기본 0으로 계산합니다. 정확한 값을 알면 입력하세요(저장되지 않음).</span>
-  </div>
-
   <div class="statpanel" id="statPanel"></div>
 
   <div class="summary" id="summaryCards"></div>
@@ -268,14 +262,12 @@ const CONST = {
   biscuitBuffDmgup: 0.40, biscuitBuffWc: 0.54,
   hebUltAtk: 0.23, hebUltCd: 0.34,
   // 아일린 (스킬 설명 기준)
+  ailinPassiveAtk: 0.25,                        // 패시브: 모든 아군 물리 공격력 25% 증가(상시)
   ailinBasic: 1.45,                             // 평타 145% (파괴신은 감전에 걸리지 않아 추가 65% 없음)
   ailinLowerHit: 0.61, ailinLowerHits: 3,       // 아래(전광석화) 61% x 3회
   ailinDefshredStack: 0.08, ailinDefshredMax: 4, // 타격마다 방깎 8% 1중첩, 최대 4중첩
   corrSeinBasic: 1.0, corrShao: 1.000,
 };
-
-// 스킬 설명에 수치가 없는 값 (화면 입력칸에서 조정, 기본 0)
-let state_ailinPassiveAtk = 0;   // 아일린 패시브: 모든 아군 물리 공격력 증가(%)
 
 let state_petPotential = DEFAULT_PET_POTENTIAL;
 let state_S = null; // computeAll()에서 넘겨받는 현재 스탯(참조용)
@@ -329,7 +321,7 @@ function atkStandard(statATK, formaPct, buffgong, dogamOverride){
 // 헤브니아 패시브/각성 버프 대상: 헤브 본인 + 공격력 상위 2명(세인, 샤오)
 const HEB_BUFF_TARGETS = ['hebnia','sein','shao'];
 function buffAtk(char, t){
-  let b = state_ailinPassiveAtk/100;
+  let b = CONST.ailinPassiveAtk;
   if (HEB_BUFF_TARGETS.includes(char)){
     // 헤브니아 본인 첫 행동엔 상시패시브 미적용, 다음 행동부터 적용(실측검증)
     if (char!=='hebnia' || t>HEB_FIRST_ACTION) b += CONST.hebniaPassiveAtk;
@@ -656,11 +648,6 @@ document.getElementById('petPotentialInput').addEventListener('input', (e) => {
   e.target.classList.toggle('changed', state_petPotential !== DEFAULT_PET_POTENTIAL);
   renderAll();
 });
-
-[['ailinPassiveAtkInput', v=>state_ailinPassiveAtk=v]]
-  .forEach(([id, set])=>{
-    document.getElementById(id).addEventListener('input', (e)=>{ set(parseFloat(e.target.value) || 0); renderAll(); });
-  });
 
 // URL 쿼리스트링에서 로그인 정보 읽기 (index.html의 iframe src에 포함되어 전달됨)
 const urlParams = new URLSearchParams(window.location.search);
