@@ -132,10 +132,6 @@
   <div id="unknownParamRow" style="display:flex; flex-wrap:wrap; align-items:center; gap:8px 12px; margin-bottom:16px; background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:12px 16px;">
     <label style="font-size:13px; color:var(--ailin); font-weight:700; white-space:nowrap;">아일린 패시브 아군 물공 증가(%)</label>
     <input type="number" step="any" id="ailinPassiveAtkInput" value="0" style="width:80px; flex-shrink:0; background:var(--panel2); border:1px solid var(--line); border-radius:6px; color:var(--text); padding:6px 8px; font-size:13px; text-align:right;">
-    <label style="font-size:13px; color:var(--ailin); font-weight:700; white-space:nowrap;">감전 확률 증가(%p)</label>
-    <input type="number" step="any" id="shockBonusInput" value="0" style="width:80px; flex-shrink:0; background:var(--panel2); border:1px solid var(--line); border-radius:6px; color:var(--text); padding:6px 8px; font-size:13px; text-align:right;">
-    <label style="font-size:13px; color:var(--hebnia); font-weight:700; white-space:nowrap;">헤브니아 아래 계수(%)</label>
-    <input type="number" step="any" id="hebLowerCoefInput" value="0" style="width:80px; flex-shrink:0; background:var(--panel2); border:1px solid var(--line); border-radius:6px; color:var(--text); padding:6px 8px; font-size:13px; text-align:right;">
     <span style="font-size:11px; color:var(--sub); flex-basis:100%; line-height:1.5;">스킬 설명에 수치가 없어 기본 0으로 계산합니다. 정확한 값을 알면 입력하세요(저장되지 않음).</span>
   </div>
 
@@ -252,7 +248,7 @@ const RING_DEFAULTS = {
   hebnia: ['tobeol','chihwak'],
   shao: ['tobeol','chihwak'],
   ailin: ['tobeol','chulhyeol'],
-  biscuit: ['tobeol','chulhyeol'],
+  biscuit: ['chulhyeol','hwasang'],
 };
 let state_rings = JSON.parse(JSON.stringify(RING_DEFAULTS));
 function ringDmgup(char){ return state_rings[char].reduce((s,k)=>s+RING_DEFS[k].dmgup,0); }
@@ -272,17 +268,14 @@ const CONST = {
   biscuitBuffDmgup: 0.40, biscuitBuffWc: 0.54,
   hebUltAtk: 0.23, hebUltCd: 0.34,
   // 아일린 (스킬 설명 기준)
-  ailinBasic: 1.45, ailinBasicShock: 0.65,      // 평타 145%, 감전 대상이면 +65%
-  ailinLowerHit: 0.75, ailinLowerHits: 2,       // 아래(청천벽력·진) 75% x 2회
-  ailinShockChance: 0.35,                       // 아래 타격마다 감전 35% (2턴)
+  ailinBasic: 1.45,                             // 평타 145% (파괴신은 감전에 걸리지 않아 추가 65% 없음)
+  ailinLowerHit: 0.61, ailinLowerHits: 3,       // 아래(전광석화) 61% x 3회
   ailinDefshredStack: 0.08, ailinDefshredMax: 4, // 타격마다 방깎 8% 1중첩, 최대 4중첩
   corrSeinBasic: 1.0, corrShao: 1.000,
 };
 
 // 스킬 설명에 수치가 없는 값 (화면 입력칸에서 조정, 기본 0)
 let state_ailinPassiveAtk = 0;   // 아일린 패시브: 모든 아군 물리 공격력 증가(%)
-let state_shockBonus = 0;        // 아일린 패시브: 감전 효과 적용 확률 증가(%p)
-let state_hebLowerCoef = 0;      // 헤브니아 아래 스킬 계수(%)
 
 let state_petPotential = DEFAULT_PET_POTENTIAL;
 let state_S = null; // computeAll()에서 넘겨받는 현재 스탯(참조용)
@@ -306,15 +299,6 @@ function vulnAt(t){
   if (inRanges(t, HV_RANGES)) v += CONST.hebniaSelfVuln;
   return v;
 }
-// 보스 감전 확률: 아일린 아래 2타 각각 감전(2턴 = 보스 평타 2회째까지) → 그 사이 행동에 적용
-function shockProbAt(t){
-  const p = Math.min(CONST.ailinShockChance + state_shockBonus/100, 1);
-  let none = 1;
-  AILIN_LOWER_CASTS.forEach(c=>{
-    if (t>c && t<nthAfter(BOSS_BASIC, c, 2)) none *= Math.pow(1-p, CONST.ailinLowerHits);
-  });
-  return 1 - none;
-}
 function critWeakFour(atk, coef, dc, cd, du, vl, amp, corr, wd){
   wd = wd || 1.3;
   const base = (atk*coef/dc)*corr;
@@ -332,7 +316,7 @@ const CHAR_CONST = {
   sein:    { dogam: 1500, formaPct: 0.4 },
   shao:    { dogam: 1389, formaPct: 0 },
   hebnia:  { dogam: 1569, formaPct: 0 },
-  ailin:   { dogam: 1500, formaPct: 0 },   // 아일린 도감 값 미확인 → 1500 가정
+  ailin:   { dogam: 1306, formaPct: 0 },
 };
 const DOGAM = 1500;
 function atkStandard(statATK, formaPct, buffgong, dogamOverride){
@@ -388,25 +372,19 @@ function computeAll(S){
 
     if (char==='헤브'){
       const atk=atkOf(S,'hebnia',t), cd=critdmgOf(S,'hebnia',t), du=dmgupOf('hebnia',t), amp=1+S.hebnia.amp/100;
-      if (action==='아래' && !state_hebLowerCoef){
-        rows.push([t,'헤브니아','아래(계수 미입력)',{n:0,c:0,w:0,cw:0}]);
-        return;
-      }
-      const coef = {'위':3.40,'평타':1.20,'각성':3.50,'아래':state_hebLowerCoef/100}[action];
+      const coef = {'위':3.40,'평타':1.20,'각성':3.50,'아래':1.60}[action];
       const r = critWeakFour(atk, coef, dc, cd, du, vl, amp, 1.0);
-      const label = {'위':'위(맹렬한공격)','평타':'평타','각성':'각성(유성폭발)','아래':'아래'}[action];
+      const label = {'위':'위(맹렬한공격)','평타':'평타','각성':'각성(유성폭발)','아래':'아래(검의 심판)'}[action];
       rows.push([t,'헤브니아',label,r]);
 
     } else if (char==='아일린'){
       const atk=atkOf(S,'ailin',t), cd=critdmgOf(S,'ailin',t), du=dmgupOf('ailin',t), amp=1+S.ailin.amp/100;
       if (action==='평타'){
-        const ps = shockProbAt(t);
-        const coef = CONST.ailinBasic + CONST.ailinBasicShock*ps;
-        const r = critWeakFour(atk, coef, dc, cd, du, vl, amp, 1.0);
-        rows.push([t,'아일린', ps>0 ? `평타(감전 기댓값 ${Math.round(ps*100)}%)` : '평타', r]);
+        const r = critWeakFour(atk, CONST.ailinBasic, dc, cd, du, vl, amp, 1.0);
+        rows.push([t,'아일린','평타',r]);
       } else {
         const r = critWeakFour(atk, CONST.ailinLowerHit*CONST.ailinLowerHits, dc, cd, du, vl, amp, 1.0);
-        rows.push([t,'아일린','아래(청천벽력·진, 75%×2)',r]);
+        rows.push([t,'아일린','아래(전광석화, 61%×3)',r]);
       }
 
     } else if (char==='세인'){
@@ -586,7 +564,7 @@ function renderTable(rows){
         <td class="turn">${t}</td>
         <td><span class="char-tag" style="--c:${color}">${char}</span></td>
         <td class="action">${action}</td>
-        <td class="num" colspan="4" style="text-align:center;color:var(--sub);font-style:italic;">${action.includes('미입력') ? '계수 미입력 (위 입력칸에서 헤브니아 아래 계수 입력)' : '데미지 없음 (버프 전용)'}</td>
+        <td class="num" colspan="4" style="text-align:center;color:var(--sub);font-style:italic;">데미지 없음 (버프 전용)</td>
       </tr>`;
     } else {
       html += `<tr>
@@ -679,7 +657,7 @@ document.getElementById('petPotentialInput').addEventListener('input', (e) => {
   renderAll();
 });
 
-[['ailinPassiveAtkInput', v=>state_ailinPassiveAtk=v], ['shockBonusInput', v=>state_shockBonus=v], ['hebLowerCoefInput', v=>state_hebLowerCoef=v]]
+[['ailinPassiveAtkInput', v=>state_ailinPassiveAtk=v]]
   .forEach(([id, set])=>{
     document.getElementById(id).addEventListener('input', (e)=>{ set(parseFloat(e.target.value) || 0); renderAll(); });
   });
