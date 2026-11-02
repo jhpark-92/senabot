@@ -258,7 +258,7 @@ const CONST = {
   hebniaPassiveAtk: 0.25,
   windyVuln: 0.30, hebniaSelfVuln: 0.29,
   biscuitDefshred: 0.24, shaoDefshred: 0.39,
-  avenger: 0.70, shaoPassive: 0.23,
+  avenger: 0.70,
   biscuitBuffDmgup: 0.40, biscuitBuffWc: 0.54,
   hebUltAtk: 0.23, hebUltCd: 0.34,
   // 아일린 (스킬 설명 기준)
@@ -340,7 +340,7 @@ function critdmgOf(S, char, t){
 }
 function biscuitBuffOn(char, t){ return !!BISCUIT_RANGES[char] && inRangesArr(t, BISCUIT_RANGES[char]); }
 function dmgupOf(char, t){
-  let d = CONST.avenger + ringDmgup(char) + CONST.shaoPassive;
+  let d = CONST.avenger + ringDmgup(char);
   if (biscuitBuffOn(char, t)) d += CONST.biscuitBuffDmgup;
   return d;
 }
@@ -407,7 +407,7 @@ function computeAll(S){
 
     } else if (char==='비스킷'){
       if (action==='평타'){
-        const du=CONST.shaoPassive+ringDmgup('biscuit'), amp=1+S.biscuit.amp/100, cd=1+S.biscuit.cd/100;
+        const du=ringDmgup('biscuit'), amp=1+S.biscuit.amp/100, cd=1+S.biscuit.cd/100;
         const raw = atkBiscuitM(S)*0.50 + S.biscuit.defense*0.60;
         const r = critWeakFour(raw,1.0,dc,cd,du,vl,amp,1.0);
         rows.push([t,'비스킷','평타',r]);
